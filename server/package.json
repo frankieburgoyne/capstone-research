@@ -1,0 +1,14 @@
+{
+  "name": "server",
+  "version": "1.0.0",
+  "description": "",
+  "main": "index.js",
+  "type":"module",
+  "scripts": {
+  "dev": "tsx watch --env-file=.env src/index.ts",
+  "ingest": "tsx --env-file=.env src/ingest-cli.ts"
+},
+  "keywords": [],
+  "author": "",
+  "license": "ISC"
+}
