@@ -3,12 +3,25 @@
   "version": "1.0.0",
   "description": "",
   "main": "index.js",
-  "type":"module",
+  "type": "module",
   "scripts": {
-  "dev": "tsx watch --env-file=.env src/index.ts",
-  "ingest": "tsx --env-file=.env src/ingest-cli.ts"
-},
+    "dev": "tsx watch --env-file=.env src/index.ts",
+    "ingest": "tsx --env-file=.env src/ingest-cli.ts"
+  },
   "keywords": [],
   "author": "",
-  "license": "ISC"
+  "license": "ISC",
+  "dependencies": {
+    "express": "^5.2.1",
+    "node-cron": "^4.6.0",
+    "pg": "^8.23.1",
+    "socket.io": "^4.8.4"
+  },
+  "devDependencies": {
+    "@types/express": "^5.0.6",
+    "@types/node": "^26.6.4",
+    "@types/pg": "^8.23.1",
+    "tsx": "^4.23.15",
+    "typescript": "^7.0.2"
+  }
 }
