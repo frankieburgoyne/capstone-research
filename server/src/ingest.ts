@@ -38,3 +38,15 @@ for (const ev of events) {
 }
 return events.length;
 }
+
+let lastIngest = 0;
+
+export async function ensureFresh(maxAgeMs = 2 * 60 * 1000) {
+if (Date.now() - lastIngest < maxAgeMs) return;
+lastIngest = Date.now();
+try {
+    await ingestGames();
+} catch (err) {
+    console.error("Refresh failed:", err);
+}
+}
