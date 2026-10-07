@@ -44,26 +44,20 @@ app.post("/api/picks", async (req, res) => {
   res.status(201).json({ ok: true });
 });
 
-// GET /api/quote: hard-coded odds formula (placeholder for a real model)
+// GET /api/quote: hard-coded odds formula
+// give a "home field advantage" for sake of milestone and to have some odds calculated in demo
 app.get("/api/quote", (req, res) => {
   const wager = Number(req.query.wager);
   const side = req.query.side;
   if (!Number.isFinite(wager) || wager <= 0 || (side !== "home" && side !== "away")) {
     return res.status(400).json({ error: "wager (> 0) and side (home|away) required" });
   }
-  const pHome = 0.55; // assumed home-field advantage
+  const pHome = 0.55;
   const p = side === "home" ? pHome : 1 - pHome;
-  const odds = (1 / p) * 0.95; // fair odds minus a 5% house cut
+  const odds = (1 / p) * 0.95;
   res.json({
     odds: Math.round(odds * 100) / 100,
     payout: Math.round(wager * odds * 100) / 100,
-  });
-});
-
-// Chat: broadcast every message to everyone connected
-io.on("connection", (socket) => {
-  socket.on("chat", (msg: { user: string; text: string }) => {
-    io.emit("chat", msg);
   });
 });
 
