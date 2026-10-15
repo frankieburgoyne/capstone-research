@@ -3,16 +3,19 @@ import { useNavigate } from "react-router";
 import { useAuth } from "./auth";
 
 type Mode = {
-  slug: string;
-  name: string;
-  description: string;
-  unlock_trophies: number;
-  min_season: number;
-  max_season: number;
-  random_season: boolean;
-  allowed_tiers: string[];
-  budget: number;
-  unlocked: boolean;
+    slug: string;
+    name: string;
+    description: string;
+    unlock_trophies: number;
+    min_season: number;
+    max_season: number;
+    random_season: boolean;
+    allowed_tiers: string[];
+    budget: number;
+    win_trophies: number;
+    loss_trophies: number;
+    entry_fee: number;
+    unlocked: boolean;
 };
 
 function poolText(m: Mode): string {
@@ -68,8 +71,10 @@ export default function ModesPage() {
         body: JSON.stringify({ modeSlug: slug }),
       });
       const data = await res.json().catch(() => ({}));
-      if (res.ok) navigate(`/draft/${data.id}`);
-      else setStatus(data.error ?? "Could not start the draft.");
+        if (res.ok) {
+        await refresh(); // the entry fee was just taken from your tokens
+        navigate(`/draft/${data.id}`);
+      } else setStatus(data.error ?? "Could not start the draft.");
     } catch {
       setStatus("Could not reach the server.");
     }
@@ -112,8 +117,12 @@ export default function ModesPage() {
             <p style={{ margin: "0 0 8px", fontSize: 14 }}>
               Pool: {poolText(m)} · Cards: {m.allowed_tiers.join(", ")} · Budget: {m.budget} tokens
             </p>
+              <p style={{ margin: "0 0 8px", fontSize: 14 }}>
+              Entry: <strong>{m.entry_fee} tokens</strong> · Win: +{m.win_trophies} trophies and double your
+              entry back · Loss: -{m.loss_trophies} trophies and you lose your entry
+            </p>
             {m.unlocked ? (
-              <button onClick={() => startDraft(m.slug)}>Draft</button>
+              <button onClick={() => startDraft(m.slug)}>Enter ({m.entry_fee} tokens)</button>
             ) : (
               <span>
                 Locked: reach {m.unlock_trophies} trophies ({m.unlock_trophies - user.best_trophies}{" "}

@@ -1,20 +1,9 @@
 import { Router } from "express";
 import { pool } from "./db.js";
+import { buildCpuLineup, playMatch, SLOTS } from "./matchup.js";
+import type { PoolCard } from "./matchup.js";
 
 export const draftsRouter = Router();
-
-// The 9 lineup slots and which card type fits each one
-const SLOTS = [
-  { slot: "QB", group: "QB" },
-  { slot: "RB", group: "RB" },
-  { slot: "WR1", group: "WR" },
-  { slot: "WR2", group: "WR" },
-  { slot: "TE", group: "TE" },
-  { slot: "K", group: "K" },
-  { slot: "DL", group: "DL" },
-  { slot: "LB", group: "LB" },
-  { slot: "DB", group: "DB" },
-];
 
 // How many cards of each type are offered in a draft
 const POOL_SIZE: Record<string, number> = {
@@ -124,10 +113,19 @@ draftsRouter.post("/", async (req, res) => {
 
     const client = await pool.connect();
     try {
-      await client.query("BEGIN");
+        await client.query("BEGIN");
+      // Pay the entry fee. This only succeeds if the user has enough tokens.
+      const paid = await client.query(
+        "UPDATE users SET tokens = tokens - $1 WHERE id = $2 AND tokens >= $1",
+        [mode.entry_fee, req.user.id]
+      );
+      if (paid.rowCount === 0) {
+        await client.query("ROLLBACK");
+        return res.status(402).json({ error: `You need ${mode.entry_fee} tokens to enter this mode.` });
+      }
       const { rows } = await client.query(
-        "INSERT INTO drafts (user_id, mode_slug, season) VALUES ($1, $2, $3) RETURNING id",
-        [req.user.id, slug, season]
+        "INSERT INTO drafts (user_id, mode_slug, season, entry_fee) VALUES ($1, $2, $3, $4) RETURNING id",
+        [req.user.id, slug, season, mode.entry_fee]
       );
       const draftId = rows[0].id;
       await client.query(
@@ -156,7 +154,7 @@ draftsRouter.post("/", async (req, res) => {
   }
 });
 
-// GET /api/drafts/:id -> the draft and its cards (picked cards have a slot)
+// GET /api/drafts/:id -> the draft, its cards (picked cards have a slot), and the match result if played
 draftsRouter.get("/:id", async (req, res) => {
   if (!req.user) return res.status(401).json({ error: "Not logged in." });
   const id = Number(req.params.id);
@@ -184,7 +182,24 @@ draftsRouter.get("/:id", async (req, res) => {
        ORDER BY c.position_group, dc.cost DESC, c.name`,
       [id]
     );
-    res.json({ draft: drafts[0], cards });
+    const { rows: matches } = await pool.query(
+      `SELECT result, opponent_name, user_total, cpu_total, trophy_delta, token_delta, details
+       FROM matches WHERE draft_id = $1`,
+      [id]
+    );
+    const m = matches[0];
+    const match = m
+      ? {
+          result: m.result,
+          opponent_name: m.opponent_name,
+          user_total: m.user_total,
+          cpu_total: m.cpu_total,
+          trophy_delta: m.trophy_delta,
+          token_delta: m.token_delta,
+          slots: m.details.slots,
+        }
+      : null;
+    res.json({ draft: drafts[0], cards, match });
   } catch (err) {
     console.error(err);
     res.status(500).json({ error: "Could not load the draft." });
@@ -192,6 +207,7 @@ draftsRouter.get("/:id", async (req, res) => {
 });
 
 // POST /api/drafts/:id/submit  { picks: { QB: { player_id, season }, RB: ..., WR1: ..., ... } }
+// Saves the lineup, plays it against the computer, and applies the trophies and tokens.
 draftsRouter.post("/:id/submit", async (req, res) => {
   if (!req.user) return res.status(401).json({ error: "Not logged in." });
   const id = Number(req.params.id);
@@ -203,7 +219,7 @@ draftsRouter.post("/:id/submit", async (req, res) => {
   try {
     await client.query("BEGIN");
     const { rows: drafts } = await client.query(
-      `SELECT d.id, d.status, m.budget
+       `SELECT d.id, d.status, d.entry_fee, m.budget, m.bot_noise, m.win_trophies, m.loss_trophies
        FROM drafts d JOIN game_modes m ON m.slug = d.mode_slug
        WHERE d.id = $1 AND d.user_id = $2
        FOR UPDATE OF d`,
@@ -220,7 +236,11 @@ draftsRouter.post("/:id/submit", async (req, res) => {
     }
 
     const { rows: pool_ } = await client.query(
-      "SELECT player_id, season, position_group, cost FROM draft_cards WHERE draft_id = $1",
+      `SELECT dc.player_id, dc.season, dc.position_group, dc.cost, dc.tier,
+              c.name, c.position, c.team, c.headshot_url, c.fantasy_points
+       FROM draft_cards dc
+       JOIN cards c ON c.player_id = dc.player_id AND c.season = dc.season
+       WHERE dc.draft_id = $1`,
       [id]
     );
 
@@ -228,6 +248,7 @@ draftsRouter.post("/:id/submit", async (req, res) => {
     const usedCards = new Set<string>();
     const usedPlayers = new Set<string>();
     const chosen: { slot: string; player_id: string; season: number }[] = [];
+    const userLineup: Record<string, PoolCard> = {};
     for (const { slot, group } of SLOTS) {
       const pick = picks[slot];
       const card = pool_.find(
@@ -250,6 +271,7 @@ draftsRouter.post("/:id/submit", async (req, res) => {
       usedPlayers.add(card.player_id);
       total += card.cost;
       chosen.push({ slot, player_id: card.player_id, season: card.season });
+      userLineup[slot] = card as PoolCard;
     }
     if (total > draft.budget) {
       await client.query("ROLLBACK");
@@ -265,6 +287,52 @@ draftsRouter.post("/:id/submit", async (req, res) => {
     await client.query(
       "UPDATE drafts SET status = 'submitted', total_cost = $1, submitted_at = now() WHERE id = $2",
       [total, id]
+    );
+
+    // The computer drafts from the same pool, then the two lineups play
+    const cpuLineup = buildCpuLineup(pool_ as PoolCard[], draft.budget, Number(draft.bot_noise));
+    if (!cpuLineup) {
+      await client.query("ROLLBACK");
+      return res.status(500).json({ error: "The computer could not build a lineup." });
+    }
+    const outcome = playMatch(userLineup, cpuLineup);
+
+    // Trophies and tokens move up or down, but never below zero
+    const { rows: people } = await client.query(
+      "SELECT trophies, best_trophies, tokens FROM users WHERE id = $1 FOR UPDATE",
+      [req.user.id]
+    );
+    const me = people[0];
+    // The entry fee was already paid when the draft started.
+    // A win pays back double the fee, a draw pays back the fee, a loss pays nothing.
+    let wantTrophies = 0;
+    let payout = 0;
+    if (outcome.result === "win") {
+      wantTrophies = draft.win_trophies;
+      payout = draft.entry_fee * 2;
+    } else if (outcome.result === "loss") {
+      wantTrophies = -draft.loss_trophies;
+    } else {
+      payout = draft.entry_fee;
+    }
+    const newTrophies = Math.max(0, me.trophies + wantTrophies);
+    const newTokens = me.tokens + payout;
+    await client.query(
+      "UPDATE users SET trophies = $1, best_trophies = $2, tokens = $3 WHERE id = $4",
+      [newTrophies, Math.max(me.best_trophies, newTrophies), newTokens, req.user.id]
+    );
+    const trophyDelta = newTrophies - me.trophies;
+    const tokenDelta = payout - draft.entry_fee; // net result of the match (the fee was paid earlier)
+
+    await client.query(
+      `INSERT INTO matches
+         (draft_id, user_id, opponent_name, result, user_total, cpu_total, trophy_delta, token_delta, details)
+       VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)`,
+      [
+        id, req.user.id, outcome.opponentName, outcome.result,
+        outcome.userTotal, outcome.cpuTotal, trophyDelta, tokenDelta,
+        JSON.stringify({ slots: outcome.slots }),
+      ]
     );
     await client.query("COMMIT");
     res.json({ ok: true, total_cost: total });

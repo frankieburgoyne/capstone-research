@@ -12,10 +12,11 @@ modesRouter.get("/", async (req, res) => {
   if (!req.user) return res.status(401).json({ error: "Not logged in." });
   try {
     const { rows } = await pool.query(
-      `SELECT slug, name, description, unlock_trophies, min_season, max_season,
-              random_season, allowed_tiers, budget
-       FROM game_modes
-       ORDER BY sort_order`
+    `SELECT slug, name, description, unlock_trophies, min_season, max_season,
+            random_season, allowed_tiers, budget,
+            entry_fee, win_trophies, loss_trophies
+    FROM game_modes
+    ORDER BY sort_order`
     );
     const best = req.user.best_trophies;
     res.json({

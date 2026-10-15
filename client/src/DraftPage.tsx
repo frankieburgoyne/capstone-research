@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useState } from "react";
 import { Link, useParams } from "react-router";
+import { useAuth } from "./auth";
 import PlayerCard from "./PlayerCard";
 import type { Card } from "./PlayerCard";
 
@@ -18,6 +19,26 @@ const SLOTS = [
 
 type DraftCard = Card & { season: number; slot: string | null };
 
+type SlotCard = {
+  name: string;
+  position: string;
+  team: string;
+  season: number;
+  tier: string;
+  fantasy_points: number;
+  score: number;
+};
+
+type Match = {
+  result: "win" | "loss" | "draw";
+  opponent_name: string;
+  user_total: number;
+  cpu_total: number;
+  trophy_delta: number;
+  token_delta: number;
+  slots: { slot: string; you: SlotCard; cpu: SlotCard }[];
+};
+
 type Draft = {
   id: number;
   status: "open" | "submitted";
@@ -29,7 +50,9 @@ type Draft = {
 
 export default function DraftPage() {
   const { id } = useParams();
+  const { refresh } = useAuth();
   const [draft, setDraft] = useState<Draft | null>(null);
+  const [match, setMatch] = useState<Match | null>(null);
   const [cards, setCards] = useState<DraftCard[]>([]);
   const [picks, setPicks] = useState<Record<string, DraftCard>>({});
   const [activeSlot, setActiveSlot] = useState("QB");
@@ -43,6 +66,7 @@ export default function DraftPage() {
         if (d.draft) {
           setDraft(d.draft);
           setCards(d.cards);
+          setMatch(d.match ?? null);
           // A submitted draft shows its saved lineup
           const saved: Record<string, DraftCard> = {};
           for (const c of d.cards as DraftCard[]) if (c.slot) saved[c.slot] = c;
@@ -122,7 +146,10 @@ export default function DraftPage() {
       });
       const data = await res.json().catch(() => ({}));
       if (!res.ok) setStatus(data.error ?? "Could not save the lineup.");
-      else load();
+      else {
+        await refresh(); // update the trophies and tokens in the top bar
+        load();
+      }
     } catch {
       setStatus("Could not reach the server.");
     }
@@ -131,7 +158,69 @@ export default function DraftPage() {
 
   const seasonLabel = draft.season ? `${draft.season} season` : "multiple seasons";
 
-  // After submitting, show the saved lineup
+  // After submitting, show the matchup result
+  if (submitted && match) {
+    const headline =
+      match.result === "win" ? "You won!" : match.result === "loss" ? "You lost" : "It's a draw";
+    const sign = (n: number) => (n > 0 ? `+${n}` : `${n}`);
+    return (
+      <div>
+        <h1>{draft.mode_name}</h1>
+        <h2>
+          {headline} {match.user_total} to {match.cpu_total}
+        </h2>
+        <p>
+          Against {match.opponent_name} · Trophies {sign(match.trophy_delta)} · Tokens{" "}
+          {sign(match.token_delta)}
+        </p>
+
+        <table style={{ borderCollapse: "collapse", width: "100%" }}>
+          <thead>
+            <tr style={{ textAlign: "left", borderBottom: "2px solid #999" }}>
+              <th>Slot</th>
+              <th>Your card</th>
+              <th>Score</th>
+              <th>{match.opponent_name}</th>
+              <th>Score</th>
+            </tr>
+          </thead>
+          <tbody>
+            {match.slots.map((s) => {
+              const youWin = s.you.score > s.cpu.score;
+              const cpuWin = s.cpu.score > s.you.score;
+              return (
+                <tr key={s.slot} style={{ borderBottom: "1px solid #ddd" }}>
+                  <td>
+                    <strong>{s.slot}</strong>
+                  </td>
+                  <td>
+                    {s.you.name} ({s.you.team} {s.you.season})
+                  </td>
+                  <td style={{ fontWeight: youWin ? "bold" : "normal", color: youWin ? "#2e7d32" : "inherit" }}>
+                    {s.you.score}
+                  </td>
+                  <td>
+                    {s.cpu.name} ({s.cpu.team} {s.cpu.season})
+                  </td>
+                  <td style={{ fontWeight: cpuWin ? "bold" : "normal", color: cpuWin ? "#2e7d32" : "inherit" }}>
+                    {s.cpu.score}
+                  </td>
+                </tr>
+              );
+            })}
+          </tbody>
+        </table>
+        <p style={{ color: "#555" }}>
+          On game day each card scores between 80% and 120% of its season total.
+        </p>
+        <p>
+          <Link to="/modes">Back to game modes</Link>
+        </p>
+      </div>
+    );
+  }
+
+  // A lineup that was saved before matchups existed
   if (submitted) {
     return (
       <div>
@@ -191,7 +280,7 @@ export default function DraftPage() {
       </div>
 
       <button onClick={submit} disabled={!allFilled || remaining < 0 || saving}>
-        {saving ? "Saving..." : "Submit lineup"}
+        {saving ? "Playing..." : "Submit lineup and play"}
       </button>
       {!allFilled && <span style={{ marginLeft: 8 }}>Fill all 9 slots to submit.</span>}
       {status && <p style={{ color: "crimson" }}>{status}</p>}
