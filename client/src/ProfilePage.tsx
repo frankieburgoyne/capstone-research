@@ -1,4 +1,5 @@
 import { useAuth } from "./auth";
+import { CoinIcon, TrophyIcon } from "./Icons";
 
 export default function ProfilePage() {
   const { user } = useAuth();
@@ -6,22 +7,25 @@ export default function ProfilePage() {
 
   return (
     <div>
-      <h2>Your profile</h2>
-      <p>
-        <strong>Name:</strong> {user.display_name}
-      </p>
-      <p>
-        <strong>Email:</strong> {user.email}
-      </p>
-      <p>
-        <strong>Token balance:</strong> {user.tokens}
-      </p>
-      <p>
-        <strong>Trophies:</strong> {user.trophies} (best: {user.best_trophies})
-      </p>
-      <p style={{ color: "#555" }}>
-        This information is saved in the database. Log out and back in and it will still be here.
-      </p>
+      <h1>{user.display_name}</h1>
+      <p className="muted">{user.email}</p>
+      <div className="hud" style={{ gap: 28, margin: "18px 0" }}>
+        <span className="stat-pill gold" style={{ fontSize: "2rem" }}>
+          <TrophyIcon />
+          {user.trophies.toLocaleString()}
+          <span className="muted" style={{ font: "500 0.95rem var(--body)" }}>
+            trophies (best {user.best_trophies.toLocaleString()})
+          </span>
+        </span>
+        <span className="stat-pill" style={{ fontSize: "2rem" }}>
+          <CoinIcon />
+          {user.tokens.toLocaleString()}
+          <span className="muted" style={{ font: "500 0.95rem var(--body)" }}>
+            tokens
+          </span>
+        </span>
+      </div>
+      <p className="muted">Your account is saved in the database, so it is still here after you log out and back in.</p>
     </div>
   );
 }

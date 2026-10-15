@@ -61,40 +61,42 @@ export default function CardsPage() {
 
   return (
     <div>
-      <h1>Player Cards</h1>
-      <p>
-        Each card is one player in one season. Tokens (1 to 100) show how the player ranked
+      <h1>Player cards</h1>
+      <p className="muted">
+        Each card is one player in one season. The cap cost (1 to 100) shows how the player ranked
         against everyone at the same position that season.
       </p>
 
-      <select value={season} onChange={(e) => setSeason(e.target.value)}>
-        <option value="">Choose season</option>
-        {seasons.map((s) => (
-          <option key={s} value={s}>
-            {s}
-          </option>
-        ))}
-      </select>{" "}
-      <select value={team} onChange={(e) => setTeam(e.target.value)} disabled={!season}>
-        <option value="">Choose team</option>
-        {teams.map((t) => (
-          <option key={t} value={t}>
-            {t}
-          </option>
-        ))}
-      </select>{" "}
-      <select value={position} onChange={(e) => setPosition(e.target.value)}>
-        <option value="ALL">All positions</option>
-        {CARD_TYPES.map((p) => (
-          <option key={p} value={p}>
-            {p}
-          </option>
-        ))}
-      </select>
+      <div className="filters">
+        <select value={season} onChange={(e) => setSeason(e.target.value)}>
+          <option value="">Choose season</option>
+          {seasons.map((s) => (
+            <option key={s} value={s}>
+              {s}
+            </option>
+          ))}
+        </select>
+        <select value={team} onChange={(e) => setTeam(e.target.value)} disabled={!season}>
+          <option value="">Choose team</option>
+          {teams.map((t) => (
+            <option key={t} value={t}>
+              {t}
+            </option>
+          ))}
+        </select>
+        <select value={position} onChange={(e) => setPosition(e.target.value)}>
+          <option value="ALL">All positions</option>
+          {CARD_TYPES.map((p) => (
+            <option key={p} value={p}>
+              {p}
+            </option>
+          ))}
+        </select>
+      </div>
 
-      <p>{status}</p>
+      <p className="muted">{status}</p>
 
-      <div style={{ display: "flex", flexWrap: "wrap", gap: 16 }}>
+      <div className="card-grid">
         {shown.map((c) => (
           <PlayerCard key={c.player_id} card={c} />
         ))}

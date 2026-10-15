@@ -33,13 +33,6 @@ export type Card = {
   tier: "elite" | "gold" | "silver" | "bronze";
 };
 
-const TIER_COLORS: Record<Card["tier"], string> = {
-  elite: "#8e44ad",
-  gold: "#d4a017",
-  silver: "#8a96a3",
-  bronze: "#a0643a",
-};
-
 // Three key stats, chosen by card type
 function keyStats(c: Card): string[] {
   const tackles = c.def_tackles_solo + c.def_tackle_assists;
@@ -66,7 +59,6 @@ function keyStats(c: Card): string[] {
 
 export default function PlayerCard({ card }: { card: Card }) {
   const [imgFailed, setImgFailed] = useState(false);
-  const color = TIER_COLORS[card.tier];
   const initials = card.name
     .split(" ")
     .map((w) => w[0])
@@ -74,69 +66,37 @@ export default function PlayerCard({ card }: { card: Card }) {
     .slice(0, 2);
 
   return (
-    <div
-      style={{
-        width: 190,
-        border: `4px solid ${color}`,
-        borderRadius: 14,
-        padding: 10,
-        background: "#fff",
-        color: "#111",
-        textAlign: "center",
-        boxShadow: "0 2px 6px rgba(0,0,0,0.25)",
-      }}
-    >
-      <div style={{ display: "flex", justifyContent: "space-between", fontWeight: "bold" }}>
-        <span>{card.position}</span>
-        <span style={{ color }}>{card.tokens} tokens</span>
+    <div className={`pcard ${card.tier}`}>
+      <div className="pcard-top">
+        <span className="pcard-pos">{card.position}</span>
+        <span className="pcard-cost" title="Cap cost">
+          {card.tokens}
+          <small>cap</small>
+        </span>
       </div>
 
       {card.headshot_url && !imgFailed ? (
         <img
+          className="pcard-photo"
           src={card.headshot_url}
           alt={card.name}
           referrerPolicy="no-referrer"
           onError={() => setImgFailed(true)}
-          style={{
-            display: "block",
-            margin: "8px auto",
-            width: 120,
-            height: 120,
-            objectFit: "cover",
-            borderRadius: "50%",
-            background: "#ddd",
-          }}
         />
       ) : (
-        <div
-          style={{
-            margin: "8px auto",
-            width: 120,
-            height: 120,
-            borderRadius: "50%",
-            background: color,
-            color: "#fff",
-            display: "flex",
-            alignItems: "center",
-            justifyContent: "center",
-            fontSize: 36,
-            fontWeight: "bold",
-          }}
-        >
-          {initials}
-        </div>
+        <div className="pcard-photo pcard-initials">{initials}</div>
       )}
 
-      <div style={{ fontWeight: "bold" }}>{card.name}</div>
-      <div style={{ fontSize: 13, color: "#555" }}>
+      <div className="pcard-name">{card.name}</div>
+      <div className="pcard-team">
         {card.team} · {card.games} games
       </div>
-      <div style={{ fontSize: 13, margin: "6px 0" }}>
+      <div className="pcard-stats">
         {keyStats(card).map((s) => (
           <div key={s}>{s}</div>
         ))}
       </div>
-      <div style={{ fontSize: 12, color }}>
+      <div className="pcard-foot">
         {card.fantasy_points.toFixed(1)} fantasy pts · {card.tier}
       </div>
     </div>

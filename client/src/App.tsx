@@ -3,94 +3,109 @@ import { Link, Navigate, NavLink, Route, Routes } from "react-router";
 import { useAuth } from "./auth";
 import { LoginPage, RegisterPage } from "./AuthPages";
 import CardsPage from "./CardsPage";
+import DraftPage from "./DraftPage";
+import { CoinIcon, TrophyIcon } from "./Icons";
 import ModesPage from "./ModesPage";
 import ProfilePage from "./ProfilePage";
-import DraftPage from "./DraftPage";
 
 // Only lets logged-in users see the page inside it
 function RequireAuth({ children }: { children: ReactNode }) {
   const { user, loading } = useAuth();
-  if (loading) return <p>Loading...</p>;
+  if (loading) return <p className="muted">Loading...</p>;
   if (!user) return <Navigate to="/login" replace />;
   return <>{children}</>;
 }
 
-const linkStyle = ({ isActive }: { isActive: boolean }) => ({
-  fontWeight: isActive ? "bold" : "normal",
-  marginRight: 16,
-});
+const navClass = ({ isActive }: { isActive: boolean }) => (isActive ? "nav-link active" : "nav-link");
 
 export default function App() {
   const { user, loading, logout } = useAuth();
 
   return (
-    <div style={{ maxWidth: 900, margin: "2rem auto", fontFamily: "sans-serif" }}>
-      <nav style={{ display: "flex", alignItems: "center", marginBottom: 24 }}>
-        <NavLink to="/" end style={linkStyle}>
-          Cards
-        </NavLink>
-        {user && (
-          <NavLink to="/modes" style={linkStyle}>
-            Modes
+    <>
+      <header className="topbar">
+        <nav className="topbar-inner">
+          <Link to="/" className="brand">
+            Draft Day
+          </Link>
+          <NavLink to="/" end className={navClass}>
+            Cards
           </NavLink>
-        )}
-        <span style={{ flex: 1 }} />
-        {loading ? null : user ? (
-          <>
-            <NavLink to="/profile" style={linkStyle}>
-              {user.display_name} · {user.trophies} trophies · {user.tokens} tokens
+          {user && (
+            <NavLink to="/modes" className={navClass}>
+              Play
             </NavLink>
-            <button onClick={logout}>Log out</button>
-          </>
-        ) : (
-          <>
-            <NavLink to="/login" style={linkStyle}>
-              Log in
-            </NavLink>
-            <NavLink to="/register" style={linkStyle}>
-              Sign up
-            </NavLink>
-          </>
-        )}
-      </nav>
+          )}
+          <span className="spacer" />
+          {loading ? null : user ? (
+            <div className="hud">
+              <span className="stat-pill gold" title="Trophies">
+                <TrophyIcon />
+                {user.trophies.toLocaleString()}
+              </span>
+              <span className="stat-pill" title="Tokens">
+                <CoinIcon />
+                {user.tokens.toLocaleString()}
+              </span>
+              <NavLink to="/profile" className="hud-name">
+                {user.display_name}
+              </NavLink>
+              <button className="btn-small" onClick={logout}>
+                Log out
+              </button>
+            </div>
+          ) : (
+            <div className="hud">
+              <NavLink to="/login" className={navClass}>
+                Log in
+              </NavLink>
+              <Link to="/register" className="btn btn-primary btn-small">
+                Sign up
+              </Link>
+            </div>
+          )}
+        </nav>
+      </header>
 
-      <Routes>
-            <Route
-             path="/draft/:id"
-             element={
-               <RequireAuth>
-                 <DraftPage />
-               </RequireAuth>
-             }
-           />
-        <Route path="/" element={<CardsPage />} />
-        <Route path="/login" element={<LoginPage />} />
-        <Route path="/register" element={<RegisterPage />} />
-        <Route
-          path="/profile"
-          element={
-            <RequireAuth>
-              <ProfilePage />
-            </RequireAuth>
-          }
-        />
-        <Route
-          path="/modes"
-          element={
-            <RequireAuth>
-              <ModesPage />
-            </RequireAuth>
-          }
-        />
-        <Route
-          path="*"
-          element={
-            <p>
-              Page not found. <Link to="/">Go to the cards</Link>
-            </p>
-          }
-        />
-      </Routes>
-    </div>
+      <main className="shell page">
+        <Routes>
+          <Route path="/" element={<CardsPage />} />
+          <Route path="/login" element={<LoginPage />} />
+          <Route path="/register" element={<RegisterPage />} />
+          <Route
+            path="/profile"
+            element={
+              <RequireAuth>
+                <ProfilePage />
+              </RequireAuth>
+            }
+          />
+          <Route
+            path="/modes"
+            element={
+              <RequireAuth>
+                <ModesPage />
+              </RequireAuth>
+            }
+          />
+          <Route
+            path="/draft/:id"
+            element={
+              <RequireAuth>
+                <DraftPage />
+              </RequireAuth>
+            }
+          />
+          <Route
+            path="*"
+            element={
+              <p>
+                Page not found. <Link to="/">Go to the cards</Link>
+              </p>
+            }
+          />
+        </Routes>
+      </main>
+    </>
   );
 }

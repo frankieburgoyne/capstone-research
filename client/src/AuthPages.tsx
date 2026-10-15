@@ -3,8 +3,6 @@ import type { FormEvent } from "react";
 import { Link, Navigate, useNavigate } from "react-router";
 import { useAuth } from "./auth";
 
-const formStyle = { display: "flex", flexDirection: "column", gap: 12, maxWidth: 320 } as const;
-
 export function LoginPage() {
   const { user, login } = useAuth();
   const navigate = useNavigate();
@@ -26,9 +24,9 @@ export function LoginPage() {
   }
 
   return (
-    <div>
+    <div className="form-card">
       <h2>Log in</h2>
-      <form onSubmit={onSubmit} style={formStyle}>
+      <form onSubmit={onSubmit}>
         <input
           type="email"
           placeholder="Email"
@@ -45,10 +43,10 @@ export function LoginPage() {
           onChange={(e) => setPassword(e.target.value)}
           required
         />
-        <button type="submit" disabled={busy}>
+        <button type="submit" className="btn-primary" disabled={busy}>
           {busy ? "Logging in..." : "Log in"}
         </button>
-        {error && <p style={{ color: "crimson", margin: 0 }}>{error}</p>}
+        {error && <p className="error" style={{ margin: 0 }}>{error}</p>}
       </form>
       <p>
         No account yet? <Link to="/register">Create one</Link>
@@ -79,9 +77,9 @@ export function RegisterPage() {
   }
 
   return (
-    <div>
+    <div className="form-card">
       <h2>Create an account</h2>
-      <form onSubmit={onSubmit} style={formStyle}>
+      <form onSubmit={onSubmit}>
         <input
           type="text"
           placeholder="Display name"
@@ -109,10 +107,10 @@ export function RegisterPage() {
           onChange={(e) => setPassword(e.target.value)}
           required
         />
-        <button type="submit" disabled={busy}>
+        <button type="submit" className="btn-primary" disabled={busy}>
           {busy ? "Creating..." : "Create account"}
         </button>
-        {error && <p style={{ color: "crimson", margin: 0 }}>{error}</p>}
+        {error && <p className="error" style={{ margin: 0 }}>{error}</p>}
       </form>
       <p>
         Already have an account? <Link to="/login">Log in</Link>

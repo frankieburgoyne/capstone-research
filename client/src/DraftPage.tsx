@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useState } from "react";
 import { Link, useParams } from "react-router";
 import { useAuth } from "./auth";
+import { CoinIcon, TrophyIcon } from "./Icons";
 import PlayerCard from "./PlayerCard";
 import type { Card } from "./PlayerCard";
 
@@ -48,6 +49,65 @@ type Draft = {
   budget: number;
 };
 
+// Counts a number up from 0 once, so the scoreboard feels like it is tallying.
+// Skips the animation for people who ask their system for less motion.
+function useCountUp(target: number, ms = 1100): number {
+  const [value, setValue] = useState(0);
+  useEffect(() => {
+    if (window.matchMedia("(prefers-reduced-motion: reduce)").matches) {
+      setValue(target);
+      return;
+    }
+    const start = performance.now();
+    let frame = 0;
+    const tick = (now: number) => {
+      const t = Math.min(1, (now - start) / ms);
+      setValue(target * (1 - Math.pow(1 - t, 3)));
+      if (t < 1) frame = requestAnimationFrame(tick);
+    };
+    frame = requestAnimationFrame(tick);
+    return () => cancelAnimationFrame(frame);
+  }, [target, ms]);
+  return value;
+}
+
+function Scoreboard({ match, modeName }: { match: Match; modeName: string }) {
+  const you = useCountUp(match.user_total);
+  const cpu = useCountUp(match.cpu_total);
+  const verdict = match.result === "win" ? "Win" : match.result === "loss" ? "Loss" : "Draw";
+  const sign = (n: number) => (n > 0 ? `+${n}` : `${n}`);
+  const cls = (n: number) => (n > 0 ? "up" : n < 0 ? "down" : "flat");
+  return (
+    <section className="scoreboard" aria-label="Final score">
+      <div className="sb-title">
+        <span>{modeName}</span>
+        <span>vs {match.opponent_name}</span>
+      </div>
+      <div className="sb-grid">
+        <div>
+          <div className="sb-team">You</div>
+          <div className={match.result === "loss" ? "sb-num dim" : "sb-num"}>{you.toFixed(1)}</div>
+        </div>
+        <div className={`sb-verdict ${match.result}`}>{verdict}</div>
+        <div>
+          <div className="sb-team">{match.opponent_name}</div>
+          <div className={match.result === "win" ? "sb-num dim" : "sb-num"}>{cpu.toFixed(1)}</div>
+        </div>
+      </div>
+      <div className="sb-deltas">
+        <span className={`delta ${cls(match.trophy_delta)}`} title="Trophies">
+          <TrophyIcon />
+          {sign(match.trophy_delta)}
+        </span>
+        <span className={`delta ${cls(match.token_delta)}`} title="Tokens (after your entry fee)">
+          <CoinIcon />
+          {sign(match.token_delta)}
+        </span>
+      </div>
+    </section>
+  );
+}
+
 export default function DraftPage() {
   const { id } = useParams();
   const { refresh } = useAuth();
@@ -83,7 +143,7 @@ export default function DraftPage() {
     load();
   }, [load]);
 
-  if (!draft) return <p>{status}</p>;
+  if (!draft) return <p className="muted">{status}</p>;
 
   const submitted = draft.status === "submitted";
   const spent = Object.values(picks).reduce((sum, c) => sum + c.tokens, 0);
@@ -160,62 +220,51 @@ export default function DraftPage() {
 
   // After submitting, show the matchup result
   if (submitted && match) {
-    const headline =
-      match.result === "win" ? "You won!" : match.result === "loss" ? "You lost" : "It's a draw";
-    const sign = (n: number) => (n > 0 ? `+${n}` : `${n}`);
     return (
       <div>
-        <h1>{draft.mode_name}</h1>
-        <h2>
-          {headline} {match.user_total} to {match.cpu_total}
-        </h2>
-        <p>
-          Against {match.opponent_name} · Trophies {sign(match.trophy_delta)} · Tokens{" "}
-          {sign(match.token_delta)}
-        </p>
+        <Scoreboard match={match} modeName={draft.mode_name} />
 
-        <table style={{ borderCollapse: "collapse", width: "100%" }}>
-          <thead>
-            <tr style={{ textAlign: "left", borderBottom: "2px solid #999" }}>
-              <th>Slot</th>
-              <th>Your card</th>
-              <th>Score</th>
-              <th>{match.opponent_name}</th>
-              <th>Score</th>
-            </tr>
-          </thead>
-          <tbody>
-            {match.slots.map((s) => {
-              const youWin = s.you.score > s.cpu.score;
-              const cpuWin = s.cpu.score > s.you.score;
-              return (
-                <tr key={s.slot} style={{ borderBottom: "1px solid #ddd" }}>
+        <h3>Play by play</h3>
+        <div className="tablewrap">
+          <table className="plays">
+            <thead>
+              <tr>
+                <th>Slot</th>
+                <th>Your card</th>
+                <th>Pts</th>
+                <th>{match.opponent_name}</th>
+                <th>Pts</th>
+              </tr>
+            </thead>
+            <tbody>
+              {match.slots.map((s) => (
+                <tr key={s.slot}>
+                  <td className="slotcol">{s.slot}</td>
                   <td>
-                    <strong>{s.slot}</strong>
+                    {s.you.name}
+                    <span className="sub">
+                      {s.you.team} {s.you.season}
+                    </span>
                   </td>
+                  <td className={s.you.score > s.cpu.score ? "pts best" : "pts"}>{s.you.score}</td>
                   <td>
-                    {s.you.name} ({s.you.team} {s.you.season})
+                    {s.cpu.name}
+                    <span className="sub">
+                      {s.cpu.team} {s.cpu.season}
+                    </span>
                   </td>
-                  <td style={{ fontWeight: youWin ? "bold" : "normal", color: youWin ? "#2e7d32" : "inherit" }}>
-                    {s.you.score}
-                  </td>
-                  <td>
-                    {s.cpu.name} ({s.cpu.team} {s.cpu.season})
-                  </td>
-                  <td style={{ fontWeight: cpuWin ? "bold" : "normal", color: cpuWin ? "#2e7d32" : "inherit" }}>
-                    {s.cpu.score}
-                  </td>
+                  <td className={s.cpu.score > s.you.score ? "pts best" : "pts"}>{s.cpu.score}</td>
                 </tr>
-              );
-            })}
-          </tbody>
-        </table>
-        <p style={{ color: "#555" }}>
+              ))}
+            </tbody>
+          </table>
+        </div>
+        <p className="muted" style={{ marginTop: 12 }}>
           On game day each card scores between 80% and 120% of its season total.
         </p>
-        <p>
-          <Link to="/modes">Back to game modes</Link>
-        </p>
+        <Link to="/modes" className="btn btn-primary">
+          Back to games
+        </Link>
       </div>
     );
   }
@@ -224,85 +273,93 @@ export default function DraftPage() {
   if (submitted) {
     return (
       <div>
-        <h1>{draft.mode_name}: lineup saved</h1>
-        <p>
-          Spent {draft.total_cost} of {draft.budget} tokens.
+        <h1>{draft.mode_name}</h1>
+        <p className="muted">
+          Lineup saved. Spent {draft.total_cost} of {draft.budget} cap.
         </p>
-        <div style={{ display: "flex", flexWrap: "wrap", gap: 16 }}>
+        <div className="saved-lineup">
           {SLOTS.map((s) => {
             const c = picks[s.slot];
             return c ? (
-              <div key={s.slot} style={{ textAlign: "center" }}>
-                <strong>{s.slot}</strong> · {c.season}
+              <div key={s.slot}>
+                <div className="pick-year">
+                  {s.slot} · {c.season}
+                </div>
                 <PlayerCard card={c} />
               </div>
             ) : null;
           })}
         </div>
-        <p>
-          <Link to="/modes">Back to game modes</Link>
+        <p style={{ marginTop: 18 }}>
+          <Link to="/modes" className="btn">
+            Back to games
+          </Link>
         </p>
       </div>
     );
   }
 
   const candidates = cards.filter((c) => c.position_group === activeGroup);
+  const pct = Math.min(100, Math.round((spent / draft.budget) * 100));
 
   return (
     <div>
-      <h1>{draft.mode_name}</h1>
-      <p>
-        {seasonLabel} · Budget: <strong>{spent}</strong> / {draft.budget} tokens ({remaining} left)
-        {neededForEmpty > 0 && ` · Empty slots need at least ${neededForEmpty}`}
-      </p>
+      <div className="draft-head">
+        <div>
+          <h1 style={{ marginBottom: 2 }}>{draft.mode_name}</h1>
+          <span className="muted">{seasonLabel}</span>
+        </div>
+        <div className="budget">
+          <div className="budget-text">
+            <span>
+              <strong>{spent}</strong> of {draft.budget} cap used
+            </span>
+            <span className={remaining < 0 ? "error" : "muted"}>{remaining} left</span>
+          </div>
+          <div className="meter" aria-hidden="true">
+            <div className={remaining < 0 ? "meter-fill over" : "meter-fill"} style={{ width: `${pct}%` }} />
+          </div>
+          {neededForEmpty > 0 && (
+            <div className="muted" style={{ fontSize: "0.85rem", marginTop: 4 }}>
+              Empty slots need at least {neededForEmpty}
+            </div>
+          )}
+        </div>
+      </div>
 
-      <div style={{ display: "flex", flexWrap: "wrap", gap: 8, marginBottom: 16 }}>
+      <div className="slots">
         {SLOTS.map((s) => {
           const p = picks[s.slot];
-          const active = s.slot === activeSlot;
+          const cls = ["slot", s.slot === activeSlot ? "active" : "", p ? "filled" : ""].join(" ");
           return (
-            <button
-              key={s.slot}
-              onClick={() => setActiveSlot(s.slot)}
-              style={{
-                padding: "6px 10px",
-                border: active ? "3px solid #1565c0" : "1px solid #999",
-                borderRadius: 8,
-                minWidth: 110,
-                textAlign: "left",
-              }}
-            >
-              <div style={{ fontWeight: "bold" }}>{s.slot}</div>
-              <div style={{ fontSize: 12 }}>{p ? `${p.name} (${p.tokens})` : "empty"}</div>
+            <button key={s.slot} className={cls} onClick={() => setActiveSlot(s.slot)}>
+              <div className="slot-name">{s.slot}</div>
+              <div className="slot-pick">{p ? `${p.name} (${p.tokens})` : "Empty"}</div>
             </button>
           );
         })}
       </div>
 
-      <button onClick={submit} disabled={!allFilled || remaining < 0 || saving}>
-        {saving ? "Playing..." : "Submit lineup and play"}
-      </button>
-      {!allFilled && <span style={{ marginLeft: 8 }}>Fill all 9 slots to submit.</span>}
-      {status && <p style={{ color: "crimson" }}>{status}</p>}
+      <div className="submit-row">
+        <button className="btn-primary" onClick={submit} disabled={!allFilled || remaining < 0 || saving}>
+          {saving ? "Playing..." : "Lock in lineup and play"}
+        </button>
+        {!allFilled && <span className="muted">Fill all 9 slots to play.</span>}
+      </div>
+      {status && <p className="error">{status}</p>}
 
-      <h3>Choose your {activeSlot}</h3>
-      <div style={{ display: "flex", flexWrap: "wrap", gap: 16 }}>
+      <h2 style={{ marginTop: 22 }}>Choose your {activeSlot}</h2>
+      <div className="card-grid">
         {candidates.map((c) => {
           const chosen = picks[activeSlot]?.player_id === c.player_id && picks[activeSlot]?.season === c.season;
           const ok = chosen || canPick(c);
           return (
             <div
               key={`${c.player_id}-${c.season}`}
+              className={["pick", chosen ? "chosen" : "", ok ? "" : "blocked"].join(" ")}
               onClick={() => choose(c)}
-              style={{
-                cursor: ok ? "pointer" : "not-allowed",
-                opacity: ok ? 1 : 0.35,
-                outline: chosen ? "4px solid #1565c0" : "none",
-                borderRadius: 16,
-                textAlign: "center",
-              }}
             >
-              <div style={{ fontSize: 13 }}>{c.season}</div>
+              <div className="pick-year">{c.season}</div>
               <PlayerCard card={c} />
             </div>
           );
