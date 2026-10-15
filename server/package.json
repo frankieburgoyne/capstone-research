@@ -9,18 +9,30 @@
   "start": "tsx src/index.ts",
   "import-cards": "tsx --env-file=.env src/import-cards.ts",
   "export-cards": "tsx --env-file=.env src/export-cards.ts",
-  "archive-nflverse": "tsx src/archive-nflverse.ts"
+  "archive-nflverse": "tsx src/archive-nflverse.ts",
+  "migrate": "node --env-file=.env node_modules/node-pg-migrate/bin/node-pg-migrate.js up -m migrations",
+  "migrate:deploy": "node-pg-migrate up -m migrations"
 },
   "keywords": [],
   "author": "",
   "license": "ISC",
   "dependencies": {
+    "bcryptjs": "^3.0.3",
+    "connect-pg-simple": "^10.0.0",
     "express": "^5.2.1",
+    "express-session": "^1.19.0",
+    "node-pg-migrate": "^9.0.0",
+    "passport": "^0.7.0",
+    "passport-local": "^1.0.0",
     "pg": "^8.23.1"
   },
   "devDependencies": {
+    "@types/connect-pg-simple": "^7.0.3",
     "@types/express": "^5.0.6",
+    "@types/express-session": "^1.19.0",
     "@types/node": "^26.6.4",
+    "@types/passport": "^1.0.17",
+    "@types/passport-local": "^1.0.38",
     "@types/pg": "^8.23.1",
     "tsx": "^4.23.15",
     "typescript": "^7.0.2"
