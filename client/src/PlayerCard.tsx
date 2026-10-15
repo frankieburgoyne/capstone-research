@@ -4,6 +4,7 @@ export type Card = {
   player_id: string;
   name: string;
   position: string;
+  position_group: string;
   team: string;
   headshot_url: string | null;
   games: number;
@@ -14,6 +15,19 @@ export type Card = {
   receptions: number;
   receiving_yards: number;
   receiving_tds: number;
+  def_tackles_solo: number;
+  def_tackle_assists: number;
+  def_tackles_for_loss: number;
+  def_sacks: number;
+  def_qb_hits: number;
+  def_interceptions: number;
+  def_pass_defended: number;
+  def_fumbles_forced: number;
+  def_tds: number;
+  fg_made: number;
+  fg_att: number;
+  fg_long: number;
+  pat_made: number;
   fantasy_points: number;
   tokens: number;
   tier: "elite" | "gold" | "silver" | "bronze";
@@ -26,15 +40,28 @@ const TIER_COLORS: Record<Card["tier"], string> = {
   bronze: "#a0643a",
 };
 
-// Three key stats, chosen by position
+// Three key stats, chosen by card type
 function keyStats(c: Card): string[] {
-  if (c.position === "QB") {
-    return [`${c.passing_yards} pass yds`, `${c.passing_tds} pass TD`, `${c.rushing_yards} rush yds`];
+  const tackles = c.def_tackles_solo + c.def_tackle_assists;
+  switch (c.position_group) {
+    case "QB":
+      return [`${c.passing_yards} pass yds`, `${c.passing_tds} pass TD`, `${c.rushing_yards} rush yds`];
+    case "RB":
+      return [`${c.rushing_yards} rush yds`, `${c.rushing_tds} rush TD`, `${c.receptions} rec`];
+    case "WR":
+    case "TE":
+      return [`${c.receptions} rec`, `${c.receiving_yards} rec yds`, `${c.receiving_tds} rec TD`];
+    case "K":
+      return [`${c.fg_made}/${c.fg_att} FG`, `${c.fg_long} yd long`, `${c.pat_made} XP`];
+    case "DL":
+      return [`${c.def_sacks} sacks`, `${tackles} tackles`, `${c.def_qb_hits} QB hits`];
+    case "LB":
+      return [`${tackles} tackles`, `${c.def_tackles_for_loss} TFL`, `${c.def_sacks} sacks`];
+    case "DB":
+      return [`${c.def_interceptions} INT`, `${c.def_pass_defended} pass def`, `${tackles} tackles`];
+    default:
+      return [];
   }
-  if (c.position === "RB") {
-    return [`${c.rushing_yards} rush yds`, `${c.rushing_tds} rush TD`, `${c.receptions} rec`];
-  }
-  return [`${c.receptions} rec`, `${c.receiving_yards} rec yds`, `${c.receiving_tds} rec TD`];
 }
 
 export default function PlayerCard({ card }: { card: Card }) {

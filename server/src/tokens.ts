@@ -1,15 +1,15 @@
-// Change these two functions to rebalance the whole game. No re-import needed.
+// Tokens are based on how a card ranks among players at the SAME position
+// in the SAME season. pct is a number from 0 (worst) to 1 (best).
 
 export type Tier = "elite" | "gold" | "silver" | "bronze";
 
-// Token value of a card = its season PPR fantasy points divided by 4 (minimum 1)
-export function tokensFor(fantasyPoints: number): number {
-  return Math.max(1, Math.round(fantasyPoints / 4));
+export function tokensFromPercentile(pct: number): number {
+  return Math.max(1, Math.round(pct * 100));
 }
 
-export function tierFor(tokens: number): Tier {
-  if (tokens >= 80) return "elite";
-  if (tokens >= 55) return "gold";
-  if (tokens >= 30) return "silver";
+export function tierFromPercentile(pct: number): Tier {
+  if (pct >= 0.95) return "elite";
+  if (pct >= 0.8) return "gold";
+  if (pct >= 0.5) return "silver";
   return "bronze";
 }

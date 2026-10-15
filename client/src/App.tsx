@@ -2,6 +2,8 @@ import { useEffect, useState } from "react";
 import PlayerCard from "./PlayerCard";
 import type { Card } from "./PlayerCard";
 
+const CARD_TYPES = ["QB", "RB", "WR", "TE", "K", "DL", "LB", "DB"];
+
 export default function App() {
   const [seasons, setSeasons] = useState<number[]>([]);
   const [teams, setTeams] = useState<string[]>([]);
@@ -55,12 +57,15 @@ export default function App() {
       .catch(() => setStatus("Could not reach the server."));
   }, [season, team]);
 
-  const shown = position === "ALL" ? cards : cards.filter((c) => c.position === position);
+  const shown = position === "ALL" ? cards : cards.filter((c) => c.position_group === position);
 
   return (
     <div style={{ maxWidth: 900, margin: "2rem auto", fontFamily: "sans-serif" }}>
       <h1>Player Cards</h1>
-      <p>Each card is one player in one season. Token value = season fantasy points ÷ 4.</p>
+      <p>
+        Each card is one player in one season. Tokens (1 to 100) show how the player ranked
+        against everyone at the same position that season.
+      </p>
 
       <select value={season} onChange={(e) => setSeason(e.target.value)}>
         <option value="">Choose season</option>
@@ -80,10 +85,11 @@ export default function App() {
       </select>{" "}
       <select value={position} onChange={(e) => setPosition(e.target.value)}>
         <option value="ALL">All positions</option>
-        <option value="QB">QB</option>
-        <option value="RB">RB</option>
-        <option value="WR">WR</option>
-        <option value="TE">TE</option>
+        {CARD_TYPES.map((p) => (
+          <option key={p} value={p}>
+            {p}
+          </option>
+        ))}
       </select>
 
       <p>{status}</p>

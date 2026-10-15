@@ -1,6 +1,6 @@
 import { Router } from "express";
 import { pool } from "./db.js";
-import { tokensFor, tierFor } from "./tokens.js";
+import { tokensFromPercentile, tierFromPercentile } from "./tokens.js";
 
 export const cardsRouter = Router();
 
@@ -35,7 +35,9 @@ cardsRouter.get("/teams", async (req, res) => {
   }
 });
 
-// GET /api/cards?season=2023&team=KC -> player cards with token values
+// GET /api/cards?season=2023&team=KC -> player cards with token values.
+// "pct" is how the player ranks against everyone at the same card type in that
+// season (0 = worst, 1 = best). Tokens and tier come from it.
 cardsRouter.get("/", async (req, res) => {
   const season = Number(req.query.season);
   const team = String(req.query.team ?? "");
@@ -44,18 +46,27 @@ cardsRouter.get("/", async (req, res) => {
   }
   try {
     const { rows } = await pool.query(
-      `SELECT player_id, name, position, team, headshot_url, games,
-              passing_yards, passing_tds, rushing_yards, rushing_tds,
-              receptions, receiving_yards, receiving_tds, fantasy_points
-       FROM cards
-       WHERE season = $1 AND team = $2
-       ORDER BY fantasy_points DESC`,
+      `SELECT * FROM (
+         SELECT player_id, name, position, position_group, team, headshot_url, games,
+                passing_yards, passing_tds, rushing_yards, rushing_tds,
+                receptions, receiving_yards, receiving_tds,
+                def_tackles_solo, def_tackle_assists, def_tackles_for_loss, def_sacks,
+                def_qb_hits, def_interceptions, def_pass_defended, def_fumbles_forced, def_tds,
+                fg_made, fg_att, fg_long, pat_made,
+                fantasy_points,
+                PERCENT_RANK() OVER (PARTITION BY position_group ORDER BY fantasy_points) AS pct
+         FROM cards
+         WHERE season = $1 AND position_group IS NOT NULL
+       ) ranked
+       WHERE team = $2
+       ORDER BY pct DESC, fantasy_points DESC`,
       [season, team]
     );
-    const cards = rows.map((r: any) => {
-      const tokens = tokensFor(r.fantasy_points);
-      return { ...r, tokens, tier: tierFor(tokens) };
-    });
+    const cards = rows.map((r: any) => ({
+      ...r,
+      tokens: tokensFromPercentile(r.pct),
+      tier: tierFromPercentile(r.pct),
+    }));
     res.json(cards);
   } catch (err) {
     console.error(err);
