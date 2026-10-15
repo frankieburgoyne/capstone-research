@@ -5,6 +5,7 @@ import { LoginPage, RegisterPage } from "./AuthPages";
 import CardsPage from "./CardsPage";
 import ModesPage from "./ModesPage";
 import ProfilePage from "./ProfilePage";
+import DraftPage from "./DraftPage";
 
 // Only lets logged-in users see the page inside it
 function RequireAuth({ children }: { children: ReactNode }) {
@@ -54,6 +55,14 @@ export default function App() {
       </nav>
 
       <Routes>
+            <Route
+             path="/draft/:id"
+             element={
+               <RequireAuth>
+                 <DraftPage />
+               </RequireAuth>
+             }
+           />
         <Route path="/" element={<CardsPage />} />
         <Route path="/login" element={<LoginPage />} />
         <Route path="/register" element={<RegisterPage />} />

@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useState } from "react";
+import { useNavigate } from "react-router";
 import { useAuth } from "./auth";
 
 type Mode = {
@@ -22,6 +23,7 @@ function poolText(m: Mode): string {
 
 export default function ModesPage() {
   const { user, refresh } = useAuth();
+  const navigate = useNavigate();
   const [modes, setModes] = useState<Mode[]>([]);
   const [devTools, setDevTools] = useState(false);
   const [status, setStatus] = useState("Loading...");
@@ -54,6 +56,23 @@ export default function ModesPage() {
     });
     await refresh();
     loadModes();
+  }
+
+  // Start a draft in a mode (or return to the one already open) and go to its page
+  async function startDraft(slug: string) {
+    setStatus("");
+    try {
+      const res = await fetch("/api/drafts", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ modeSlug: slug }),
+      });
+      const data = await res.json().catch(() => ({}));
+      if (res.ok) navigate(`/draft/${data.id}`);
+      else setStatus(data.error ?? "Could not start the draft.");
+    } catch {
+      setStatus("Could not reach the server.");
+    }
   }
 
   if (!user) return null;
@@ -94,7 +113,7 @@ export default function ModesPage() {
               Pool: {poolText(m)} · Cards: {m.allowed_tiers.join(", ")} · Budget: {m.budget} tokens
             </p>
             {m.unlocked ? (
-              <button disabled>Draft (coming soon)</button>
+              <button onClick={() => startDraft(m.slug)}>Draft</button>
             ) : (
               <span>
                 Locked: reach {m.unlock_trophies} trophies ({m.unlock_trophies - user.best_trophies}{" "}
