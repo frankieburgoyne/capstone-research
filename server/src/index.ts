@@ -7,6 +7,8 @@ import { cardsRouter } from "./cards.js";
 import { modesRouter } from "./modes.js";
 import { draftsRouter } from "./drafts.js";
 import { betsRouter } from "./bets.js";
+import { challengesRouter } from "./challenges.js";
+import { friendsRouter, messagesRouter } from "./social.js";
 
 const app = express();
 app.use(express.json());
@@ -18,6 +20,9 @@ app.use("/api/cards", cardsRouter);
 app.use("/api/modes", modesRouter);
 app.use("/api/drafts", draftsRouter);
 app.use("/api/bets", betsRouter);
+app.use("/api/challenges", challengesRouter);
+app.use("/api/friends", friendsRouter);
+app.use("/api/messages", messagesRouter);
 
 // In production, serve the built React page from this same server
 const clientDist = path.resolve(

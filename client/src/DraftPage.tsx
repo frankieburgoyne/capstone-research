@@ -1,9 +1,10 @@
 import { useCallback, useEffect, useState } from "react";
-import { Link, useParams } from "react-router";
+import { Link, Navigate, useNavigate, useParams } from "react-router";
 import { useAuth } from "./auth";
 import { CoinIcon, TrophyIcon } from "./Icons";
 import PlayerCard from "./PlayerCard";
 import type { Card } from "./PlayerCard";
+import { useCountUp } from "./useCountUp";
 
 // The 9 lineup slots and which card type fits each one
 const SLOTS = [
@@ -47,29 +48,8 @@ type Draft = {
   total_cost: number | null;
   mode_name: string;
   budget: number;
+  challenge_id: number | null;
 };
-
-// Counts a number up from 0 once, so the scoreboard feels like it is tallying.
-// Skips the animation for people who ask their system for less motion.
-function useCountUp(target: number, ms = 1100): number {
-  const [value, setValue] = useState(0);
-  useEffect(() => {
-    if (window.matchMedia("(prefers-reduced-motion: reduce)").matches) {
-      setValue(target);
-      return;
-    }
-    const start = performance.now();
-    let frame = 0;
-    const tick = (now: number) => {
-      const t = Math.min(1, (now - start) / ms);
-      setValue(target * (1 - Math.pow(1 - t, 3)));
-      if (t < 1) frame = requestAnimationFrame(tick);
-    };
-    frame = requestAnimationFrame(tick);
-    return () => cancelAnimationFrame(frame);
-  }, [target, ms]);
-  return value;
-}
 
 function Scoreboard({ match, modeName }: { match: Match; modeName: string }) {
   const you = useCountUp(match.user_total);
@@ -111,6 +91,7 @@ function Scoreboard({ match, modeName }: { match: Match; modeName: string }) {
 export default function DraftPage() {
   const { id } = useParams();
   const { refresh } = useAuth();
+  const navigate = useNavigate();
   const [draft, setDraft] = useState<Draft | null>(null);
   const [match, setMatch] = useState<Match | null>(null);
   const [cards, setCards] = useState<DraftCard[]>([]);
@@ -208,7 +189,8 @@ export default function DraftPage() {
       if (!res.ok) setStatus(data.error ?? "Could not save the lineup.");
       else {
         await refresh(); // update the trophies and tokens in the top bar
-        load();
+        if (data.challenge_id) navigate(`/challenges/${data.challenge_id}`);
+        else load();
       }
     } catch {
       setStatus("Could not reach the server.");
@@ -217,6 +199,9 @@ export default function DraftPage() {
   }
 
   const seasonLabel = draft.season ? `${draft.season} season` : "multiple seasons";
+
+  // A lineup for a friend challenge is finished: the challenge page shows what happens next
+  if (submitted && draft.challenge_id) return <Navigate to={`/challenges/${draft.challenge_id}`} replace />;
 
   // After submitting, show the matchup result
   if (submitted && match) {
@@ -307,7 +292,10 @@ export default function DraftPage() {
       <div className="draft-head">
         <div>
           <h1 style={{ marginBottom: 2 }}>{draft.mode_name}</h1>
-          <span className="muted">{seasonLabel}</span>
+          <span className="muted">
+            {seasonLabel}
+            {draft.challenge_id && " · Friend challenge: your friend drafts from this same pool"}
+          </span>
         </div>
         <div className="budget">
           <div className="budget-text">
@@ -342,7 +330,7 @@ export default function DraftPage() {
 
       <div className="submit-row">
         <button className="btn-primary" onClick={submit} disabled={!allFilled || remaining < 0 || saving}>
-          {saving ? "Playing..." : "Lock in lineup and play"}
+          {saving ? "Saving..." : draft.challenge_id ? "Lock in lineup" : "Lock in lineup and play"}
         </button>
         {!allFilled && <span className="muted">Fill all 9 slots to play.</span>}
       </div>

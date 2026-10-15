@@ -2,6 +2,7 @@ import { Router } from "express";
 import { pool } from "./db.js";
 import { buildCpuLineup, playMatch, SLOTS } from "./matchup.js";
 import type { PoolCard } from "./matchup.js";
+import { ChallengeInactiveError, onChallengeDraftSubmitted } from "./challenge-resolve.js";
 
 export const draftsRouter = Router();
 
@@ -13,13 +14,13 @@ const POOL_SIZE: Record<string, number> = {
 // Players who played fewer games than this are not offered (keeps out bench players)
 const MIN_GAMES = 8;
 
-type PoolRow = { player_id: string; season: number; position_group: string; cost: number; tier: string };
+export type PoolRow = { player_id: string; season: number; position_group: string; cost: number; tier: string };
 
 // Picks random cards for a pool. Each allowed tier gets an equal share of every
 // card type, so there is always a mix of cheap and expensive options.
 // Cost and tier use the same rules as tokens.ts: rank within the same season and
 // card type, 1 to 100, with the tier cutoffs at 50%, 80% and 95%. Keep them in sync.
-async function buildPool(minSeason: number, maxSeason: number, tiers: string[]): Promise<PoolRow[]> {
+export async function buildPool(minSeason: number, maxSeason: number, tiers: string[]): Promise<PoolRow[]> {
   const { rows } = await pool.query(
     `WITH ranked AS (
        SELECT player_id, season, position_group, games,
@@ -65,7 +66,7 @@ async function buildPool(minSeason: number, maxSeason: number, tiers: string[]):
 }
 
 // A pool is fair only if the cheapest possible lineup fits inside the budget
-function canFillLineup(cards: PoolRow[], budget: number): boolean {
+export function canFillLineup(cards: PoolRow[], budget: number): boolean {
   let minTotal = 0;
   for (const group of new Set(SLOTS.map((s) => s.group))) {
     const needed = SLOTS.filter((s) => s.group === group).length;
@@ -90,7 +91,7 @@ draftsRouter.post("/", async (req, res) => {
 
     // If a draft is already open in this mode, go back to it
     const { rows: open } = await pool.query(
-      "SELECT id FROM drafts WHERE user_id = $1 AND mode_slug = $2 AND status = 'open'",
+      "SELECT id FROM drafts WHERE user_id = $1 AND mode_slug = $2 AND status = 'open' AND challenge_id IS NULL",
       [req.user.id, slug]
     );
     if (open[0]) return res.json({ id: open[0].id, resumed: true });
@@ -113,7 +114,7 @@ draftsRouter.post("/", async (req, res) => {
 
     const client = await pool.connect();
     try {
-        await client.query("BEGIN");
+      await client.query("BEGIN");
       // Pay the entry fee. This only succeeds if the user has enough tokens.
       const paid = await client.query(
         "UPDATE users SET tokens = tokens - $1 WHERE id = $2 AND tokens >= $1",
@@ -154,14 +155,14 @@ draftsRouter.post("/", async (req, res) => {
   }
 });
 
-// GET /api/drafts/:id -> the draft, its cards (picked cards have a slot), and the match result if played
+// GET /api/drafts/:id -> the draft and its cards (picked cards have a slot)
 draftsRouter.get("/:id", async (req, res) => {
   if (!req.user) return res.status(401).json({ error: "Not logged in." });
   const id = Number(req.params.id);
   if (!Number.isInteger(id)) return res.status(400).json({ error: "Bad draft id." });
   try {
     const { rows: drafts } = await pool.query(
-      `SELECT d.id, d.status, d.season, d.total_cost, m.slug AS mode_slug, m.name AS mode_name, m.budget
+      `SELECT d.id, d.status, d.season, d.total_cost, d.challenge_id, m.slug AS mode_slug, m.name AS mode_name, m.budget
        FROM drafts d JOIN game_modes m ON m.slug = d.mode_slug
        WHERE d.id = $1 AND d.user_id = $2`,
       [id, req.user.id]
@@ -207,7 +208,6 @@ draftsRouter.get("/:id", async (req, res) => {
 });
 
 // POST /api/drafts/:id/submit  { picks: { QB: { player_id, season }, RB: ..., WR1: ..., ... } }
-// Saves the lineup, plays it against the computer, and applies the trophies and tokens.
 draftsRouter.post("/:id/submit", async (req, res) => {
   if (!req.user) return res.status(401).json({ error: "Not logged in." });
   const id = Number(req.params.id);
@@ -219,7 +219,7 @@ draftsRouter.post("/:id/submit", async (req, res) => {
   try {
     await client.query("BEGIN");
     const { rows: drafts } = await client.query(
-       `SELECT d.id, d.status, d.entry_fee, m.budget, m.bot_noise, m.win_trophies, m.loss_trophies
+      `SELECT d.id, d.status, d.entry_fee, d.challenge_id, m.budget, m.bot_noise, m.win_trophies, m.loss_trophies
        FROM drafts d JOIN game_modes m ON m.slug = d.mode_slug
        WHERE d.id = $1 AND d.user_id = $2
        FOR UPDATE OF d`,
@@ -289,6 +289,13 @@ draftsRouter.post("/:id/submit", async (req, res) => {
       [total, id]
     );
 
+    // A lineup for a friend challenge is not played against the computer
+    if (draft.challenge_id) {
+      await onChallengeDraftSubmitted(client, draft.challenge_id, req.user.id);
+      await client.query("COMMIT");
+      return res.json({ ok: true, total_cost: total, challenge_id: draft.challenge_id });
+    }
+
     // The computer drafts from the same pool, then the two lineups play
     const cpuLineup = buildCpuLineup(pool_ as PoolCard[], draft.budget, Number(draft.bot_noise));
     if (!cpuLineup) {
@@ -338,6 +345,9 @@ draftsRouter.post("/:id/submit", async (req, res) => {
     res.json({ ok: true, total_cost: total });
   } catch (err) {
     await client.query("ROLLBACK");
+    if (err instanceof ChallengeInactiveError) {
+      return res.status(409).json({ error: "This challenge is no longer active." });
+    }
     console.error(err);
     res.status(500).json({ error: "Could not save the lineup." });
   } finally {
