@@ -1,100 +1,98 @@
 import { useEffect, useState } from "react";
-
-type Game = {
-  id: string;
-  home_team: string;
-  away_team: string;
-  home_score: number | null;
-  away_score: number | null;
-  status: string;
-  home_picks: number;
-  away_picks: number;
-};
+import PlayerCard from "./PlayerCard";
+import type { Card } from "./PlayerCard";
 
 export default function App() {
-  const [games, setGames] = useState<Game[]>([]);
-  const [username, setUsername] = useState("");
-  const [search, setSearch] = useState("");
-  const [wager, setWager] = useState("10");
-  const [message, setMessage] = useState("");
+  const [seasons, setSeasons] = useState<number[]>([]);
+  const [teams, setTeams] = useState<string[]>([]);
+  const [cards, setCards] = useState<Card[]>([]);
+  const [season, setSeason] = useState("");
+  const [team, setTeam] = useState("");
+  const [position, setPosition] = useState("ALL");
+  const [status, setStatus] = useState("");
 
-  async function loadGames() {
-    const res = await fetch("/api/games");
-    setGames(await res.json());
-  }
-
+  // Load the season list once
   useEffect(() => {
-    loadGames();
+    fetch("/api/cards/seasons")
+      .then((r) => r.json())
+      .then((d) => {
+        if (Array.isArray(d)) setSeasons(d);
+        else setStatus(d.error ?? "Could not load seasons.");
+      })
+      .catch(() => setStatus("Could not reach the server."));
   }, []);
 
-  async function makePick(gameId: string, side: "home" | "away") {
-    if (!username.trim()) {
-      setMessage("Enter a username first.");
-      return;
-    }
-    const res = await fetch("/api/picks", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ gameId, username, pick: side }),
-    });
-    if (!res.ok) {
-      setMessage("Could not save pick.");
-      return;
-    }
-    const quote = await (
-      await fetch(`/api/quote?wager=${wager}&side=${side}`)
-    ).json();
-    setMessage(
-      `Pick saved for ${username}! Odds ${quote.odds}. A ${wager}-token wager pays ${quote.payout}.`
-    );
-    loadGames();
-  }
+  // When the season changes, load that season's teams
+  useEffect(() => {
+    setTeams([]);
+    setTeam("");
+    setCards([]);
+    if (!season) return;
+    fetch(`/api/cards/teams?season=${season}`)
+      .then((r) => r.json())
+      .then((d) => {
+        if (Array.isArray(d)) setTeams(d);
+        else setStatus(d.error ?? "Could not load teams.");
+      })
+      .catch(() => setStatus("Could not reach the server."));
+  }, [season]);
 
-  const shown = games.filter((g) =>
-    `${g.home_team} ${g.away_team}`.toLowerCase().includes(search.toLowerCase())
-  );
+  // When the team changes, load that team's cards
+  useEffect(() => {
+    setCards([]);
+    if (!season || !team) return;
+    setStatus("Loading cards...");
+    fetch(`/api/cards?season=${season}&team=${team}`)
+      .then((r) => r.json())
+      .then((d) => {
+        if (Array.isArray(d)) {
+          setCards(d);
+          setStatus(d.length ? "" : "No cards for that team and season.");
+        } else {
+          setStatus(d.error ?? "Could not load cards.");
+        }
+      })
+      .catch(() => setStatus("Could not reach the server."));
+  }, [season, team]);
+
+  const shown = position === "ALL" ? cards : cards.filter((c) => c.position === position);
 
   return (
-    <div style={{ maxWidth: 700, margin: "2rem auto", fontFamily: "sans-serif" }}>
-      <h1>Fantasy Picks</h1>
+    <div style={{ maxWidth: 900, margin: "2rem auto", fontFamily: "sans-serif" }}>
+      <h1>Player Cards</h1>
+      <p>Each card is one player in one season. Token value = season fantasy points ÷ 4.</p>
 
-      <input
-        placeholder="Your username"
-        value={username}
-        onChange={(e) => setUsername(e.target.value)}
-      />{" "}
-      <input
-        placeholder="Search teams"
-        value={search}
-        onChange={(e) => setSearch(e.target.value)}
-      />{" "}
-      <input
-        placeholder="Wager (tokens)"
-        value={wager}
-        onChange={(e) => setWager(e.target.value)}
-      />
-      <p>{message}</p>
+      <select value={season} onChange={(e) => setSeason(e.target.value)}>
+        <option value="">Choose season</option>
+        {seasons.map((s) => (
+          <option key={s} value={s}>
+            {s}
+          </option>
+        ))}
+      </select>{" "}
+      <select value={team} onChange={(e) => setTeam(e.target.value)} disabled={!season}>
+        <option value="">Choose team</option>
+        {teams.map((t) => (
+          <option key={t} value={t}>
+            {t}
+          </option>
+        ))}
+      </select>{" "}
+      <select value={position} onChange={(e) => setPosition(e.target.value)}>
+        <option value="ALL">All positions</option>
+        <option value="QB">QB</option>
+        <option value="RB">RB</option>
+        <option value="WR">WR</option>
+        <option value="TE">TE</option>
+      </select>
 
-      {shown.map((g) => (
-        <div
-          key={g.id}
-          style={{ border: "1px solid #ccc", padding: 12, margin: "12px 0" }}
-        >
-          <strong>
-            {g.away_team} @ {g.home_team}
-          </strong>{" "}
-          ({g.status})
-          <div>
-            {g.away_score ?? "-"} : {g.home_score ?? "-"}
-          </div>
-          <button onClick={() => makePick(g.id, "away")}>
-            Pick {g.away_team} ({g.away_picks})
-          </button>{" "}
-          <button onClick={() => makePick(g.id, "home")}>
-            Pick {g.home_team} ({g.home_picks})
-          </button>
-        </div>
-      ))}
+      <p>{status}</p>
+
+      <div style={{ display: "flex", flexWrap: "wrap", gap: 16 }}>
+        {shown.map((c) => (
+          <PlayerCard key={c.player_id} card={c} />
+        ))}
+      </div>
     </div>
   );
 }

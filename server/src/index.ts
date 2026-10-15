@@ -1,64 +1,22 @@
 import express from "express";
-import { createServer } from "node:http";
-import { Server } from "socket.io";
-import { pool } from "./db.js";
-import { ensureFresh } from "./ingest.js";
+import { existsSync } from "node:fs";
+import path from "node:path";
+import { fileURLToPath } from "node:url";
+import { cardsRouter } from "./cards.js";
 
 const app = express();
 app.use(express.json());
-const httpServer = createServer(app);
-const io = new Server(httpServer);
 
-app.get("/", (_req, res) => {
-  res.send("Fantasy API is running. Try /api/games");
-});
+app.use("/api/cards", cardsRouter);
 
-// GET /api/games: list games with how many users picked each side
-app.get("/api/games", async (_req, res) => {
-  await ensureFresh();
-  const { rows } = await pool.query(`
-    SELECT g.*,
-      COUNT(p.*) FILTER (WHERE p.pick = 'home')::int AS home_picks,
-      COUNT(p.*) FILTER (WHERE p.pick = 'away')::int AS away_picks
-    FROM games g
-    LEFT JOIN picks p ON p.game_id = g.id
-    GROUP BY g.id
-    ORDER BY g.start_time
-  `);
-  res.json(rows);
-});
+// In production, serve the built React page from this same server
+const clientDist = path.resolve(
+  path.dirname(fileURLToPath(import.meta.url)),
+  "../../client/dist"
+);
+if (existsSync(clientDist)) {
+  app.use(express.static(clientDist));
+}
 
-// POST /api/picks: a user submits a pick
-app.post("/api/picks", async (req, res) => {
-  const { gameId, username, pick } = req.body;
-  if (!gameId || !username?.trim() || !["home", "away"].includes(pick)) {
-    return res
-      .status(400)
-      .json({ error: "gameId, username, and pick (home|away) are required" });
-  }
-  await pool.query(
-    "INSERT INTO picks (game_id, username, pick) VALUES ($1, $2, $3)",
-    [gameId, username.trim(), pick]
-  );
-  io.emit("games-updated");
-  res.status(201).json({ ok: true });
-});
-
-// GET /api/quote: hard-coded odds formula
-// give a "home field advantage" for sake of milestone and to have some odds calculated in demo
-app.get("/api/quote", (req, res) => {
-  const wager = Number(req.query.wager);
-  const side = req.query.side;
-  if (!Number.isFinite(wager) || wager <= 0 || (side !== "home" && side !== "away")) {
-    return res.status(400).json({ error: "wager (> 0) and side (home|away) required" });
-  }
-  const pHome = 0.55;
-  const p = side === "home" ? pHome : 1 - pHome;
-  const odds = (1 / p) * 0.95;
-  res.json({
-    odds: Math.round(odds * 100) / 100,
-    payout: Math.round(wager * odds * 100) / 100,
-  });
-});
-
-httpServer.listen(3000, () => console.log("Server on http://localhost:3000"));
+const PORT = Number(process.env.PORT) || 3000;
+app.listen(PORT, () => console.log(`Server on port ${PORT}`));
