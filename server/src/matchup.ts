@@ -108,7 +108,7 @@ export function buildCpuLineup(
 }
 
 // On game day a card scores between 80% and 120% of its season total
-function rollScore(points: number): number {
+export function rollScore(points: number): number {
   return Math.round(points * (0.8 + Math.random() * 0.4) * 10) / 10;
 }
 

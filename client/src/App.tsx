@@ -2,6 +2,7 @@ import type { ReactNode } from "react";
 import { Link, Navigate, NavLink, Route, Routes } from "react-router";
 import { useAuth } from "./auth";
 import { LoginPage, RegisterPage } from "./AuthPages";
+import BetsPage from "./BetsPage";
 import CardsPage from "./CardsPage";
 import DraftPage from "./DraftPage";
 import { CoinIcon, TrophyIcon } from "./Icons";
@@ -34,6 +35,11 @@ export default function App() {
           {user && (
             <NavLink to="/modes" className={navClass}>
               Play
+            </NavLink>
+          )}
+          {user && (
+            <NavLink to="/bets" className={navClass}>
+              Bets
             </NavLink>
           )}
           <span className="spacer" />
@@ -85,6 +91,14 @@ export default function App() {
             element={
               <RequireAuth>
                 <ModesPage />
+              </RequireAuth>
+            }
+          />
+          <Route
+            path="/bets"
+            element={
+              <RequireAuth>
+                <BetsPage />
               </RequireAuth>
             }
           />

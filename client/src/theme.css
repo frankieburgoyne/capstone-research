@@ -363,3 +363,93 @@ table.plays { width: 100%; border-collapse: collapse; min-width: 560px; }
 @media (prefers-reduced-motion: reduce) {
   * { transition: none !important; animation: none !important; }
 }
+
+
+/* ---------- bets ---------- */
+.bets-layout { display: grid; grid-template-columns: 1fr 320px; gap: 24px; align-items: start; }
+.board-head { display: flex; align-items: center; justify-content: space-between; gap: 12px; margin-bottom: 12px; }
+.offers { display: grid; grid-template-columns: repeat(auto-fill, minmax(300px, 1fr)); gap: 14px; }
+.offer {
+  background: var(--turf-800);
+  border: 1px solid var(--line);
+  border-radius: 14px;
+  padding: 14px;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+.offer h3 { font-size: 1.3rem; margin: 0; }
+.offer-kind { font-size: 0.85rem; font-weight: 600; }
+
+.mini { display: flex; align-items: center; gap: 10px; }
+.mini img, .mini-initials {
+  width: 44px;
+  height: 44px;
+  border-radius: 50%;
+  flex: none;
+  object-fit: cover;
+  background: var(--turf-700);
+}
+.mini-initials { display: flex; align-items: center; justify-content: center; font: 800 1.1rem/1 var(--display); }
+.mini-text { display: flex; flex-direction: column; line-height: 1.25; min-width: 0; flex: 1; }
+.mini-text .muted { font-size: 0.8rem; }
+.mini-score { font: 800 1.7rem/1 var(--display); font-variant-numeric: tabular-nums; color: var(--chalk-dim); }
+.mini-score.win { color: var(--win); }
+
+.sels { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; margin-top: 4px; }
+.sel {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 2px;
+  text-align: left;
+  padding: 8px 10px;
+  background: var(--turf-950);
+  border-radius: 10px;
+}
+.sel-label { font-size: 0.88rem; line-height: 1.2; overflow-wrap: anywhere; }
+.sel-odds { font: 900 1.5rem/1 var(--display); color: var(--gold); font-variant-numeric: tabular-nums; }
+.sel.chosen { background: var(--gold); border-color: var(--gold); color: var(--gold-ink); }
+.sel.chosen .sel-odds { color: var(--gold-ink); }
+
+.slip {
+  position: sticky;
+  top: 84px;
+  background: var(--turf-800);
+  border: 1px solid var(--line);
+  border-radius: 14px;
+  padding: 16px;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+.slip h2 { font-size: 1.6rem; margin: 0; }
+.slip p { margin: 0; }
+.slip-list { list-style: none; margin: 0; padding: 0; display: grid; gap: 8px; }
+.slip-list li { display: flex; justify-content: space-between; gap: 10px; }
+.slip-odds { font: 800 1.2rem/1 var(--display); color: var(--gold); }
+.slip-total { display: flex; justify-content: space-between; align-items: baseline; border-top: 1px dashed var(--line); padding-top: 8px; }
+.slip-total strong { font: 900 1.7rem/1 var(--display); font-variant-numeric: tabular-nums; }
+.quick { display: flex; gap: 6px; flex-wrap: wrap; }
+
+.legs { display: grid; gap: 12px; }
+.leg { background: var(--turf-800); border: 1px solid var(--line); border-left-width: 5px; border-radius: 12px; padding: 12px 14px; display: grid; gap: 8px; }
+.leg.won { border-left-color: var(--win); }
+.leg.lost { border-left-color: var(--loss); }
+.leg.push { border-left-color: var(--chalk-dim); }
+.leg-head { display: flex; gap: 12px; align-items: baseline; flex-wrap: wrap; }
+.leg-outcome { font: 800 1.3rem/1 var(--display); }
+.leg.won .leg-outcome { color: var(--win); }
+.leg.lost .leg-outcome { color: var(--loss); }
+
+.history { list-style: none; margin: 0; padding: 0; display: grid; gap: 6px; }
+.history li { display: grid; grid-template-columns: 64px 1fr auto; gap: 12px; align-items: baseline; padding: 8px 0; border-bottom: 1px solid var(--turf-700); }
+.hist-status { font: 800 1.1rem/1 var(--display); }
+.hist-status.won, .history .up { color: var(--win); }
+.hist-status.lost, .history .down { color: var(--loss); }
+.history strong { font: 800 1.2rem/1 var(--display); }
+
+@media (max-width: 860px) {
+  .bets-layout { grid-template-columns: 1fr; }
+  .slip { position: static; order: -1; }
+}
