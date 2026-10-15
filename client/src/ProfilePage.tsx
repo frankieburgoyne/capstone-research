@@ -16,6 +16,9 @@ export default function ProfilePage() {
       <p>
         <strong>Token balance:</strong> {user.tokens}
       </p>
+      <p>
+        <strong>Trophies:</strong> {user.trophies} (best: {user.best_trophies})
+      </p>
       <p style={{ color: "#555" }}>
         This information is saved in the database. Log out and back in and it will still be here.
       </p>

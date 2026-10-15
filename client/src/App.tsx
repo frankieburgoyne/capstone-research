@@ -3,6 +3,7 @@ import { Link, Navigate, NavLink, Route, Routes } from "react-router";
 import { useAuth } from "./auth";
 import { LoginPage, RegisterPage } from "./AuthPages";
 import CardsPage from "./CardsPage";
+import ModesPage from "./ModesPage";
 import ProfilePage from "./ProfilePage";
 
 // Only lets logged-in users see the page inside it
@@ -27,11 +28,16 @@ export default function App() {
         <NavLink to="/" end style={linkStyle}>
           Cards
         </NavLink>
+        {user && (
+          <NavLink to="/modes" style={linkStyle}>
+            Modes
+          </NavLink>
+        )}
         <span style={{ flex: 1 }} />
         {loading ? null : user ? (
           <>
             <NavLink to="/profile" style={linkStyle}>
-              {user.display_name} · {user.tokens} tokens
+              {user.display_name} · {user.trophies} trophies · {user.tokens} tokens
             </NavLink>
             <button onClick={logout}>Log out</button>
           </>
@@ -56,6 +62,14 @@ export default function App() {
           element={
             <RequireAuth>
               <ProfilePage />
+            </RequireAuth>
+          }
+        />
+        <Route
+          path="/modes"
+          element={
+            <RequireAuth>
+              <ModesPage />
             </RequireAuth>
           }
         />

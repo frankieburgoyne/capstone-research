@@ -6,6 +6,8 @@ export type User = {
   email: string;
   display_name: string;
   tokens: number;
+  trophies: number;
+  best_trophies: number;
 };
 
 type AuthState = {
@@ -14,6 +16,7 @@ type AuthState = {
   login: (email: string, password: string) => Promise<string | null>;
   register: (email: string, password: string, displayName: string) => Promise<string | null>;
   logout: () => Promise<void>;
+  refresh: () => Promise<void>; // re-read the user from the server (after trophies change)
 };
 
 const AuthContext = createContext<AuthState | null>(null);
@@ -64,8 +67,17 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     setUser(null);
   }, []);
 
+  const refresh = useCallback(async () => {
+    try {
+      const res = await fetch("/api/auth/me");
+      if (res.ok) setUser(await res.json());
+    } catch {
+      // keep the current user if the server cannot be reached
+    }
+  }, []);
+
   return (
-    <AuthContext.Provider value={{ user, loading, login, register, logout }}>
+    <AuthContext.Provider value={{ user, loading, login, register, logout, refresh }}>
       {children}
     </AuthContext.Provider>
   );

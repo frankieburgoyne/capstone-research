@@ -4,6 +4,7 @@ import path from "node:path";
 import { fileURLToPath } from "node:url";
 import { authRouter, setupAuth } from "./auth.js";
 import { cardsRouter } from "./cards.js";
+import { modesRouter } from "./modes.js";
 
 const app = express();
 app.use(express.json());
@@ -12,6 +13,7 @@ setupAuth(app);
 
 app.use("/api/auth", authRouter);
 app.use("/api/cards", cardsRouter);
+app.use("/api/modes", modesRouter);
 
 // In production, serve the built React page from this same server
 const clientDist = path.resolve(

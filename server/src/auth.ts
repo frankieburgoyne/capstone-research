@@ -8,7 +8,14 @@ import { Strategy as LocalStrategy } from "passport-local";
 import { pool } from "./db.js";
 
 // What we keep about a logged-in user (never the password hash)
-type PublicUser = { id: number; email: string; display_name: string; tokens: number };
+   type PublicUser = {
+     id: number;
+     email: string;
+     display_name: string;
+     tokens: number;
+     trophies: number;
+     best_trophies: number;
+   };
 
 declare global {
   namespace Express {
@@ -16,8 +23,8 @@ declare global {
   }
 }
 
-const PUBLIC_COLUMNS = "id, email, display_name, tokens";
-
+   const PUBLIC_COLUMNS = "id, email, display_name, tokens, trophies, best_trophies";
+   
 // Called once at startup. Adds login sessions and Passport to the Express app.
 export function setupAuth(app: Express) {
   const secret = process.env.SESSION_SECRET;
