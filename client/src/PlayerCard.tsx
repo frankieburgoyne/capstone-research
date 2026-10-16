@@ -1,4 +1,5 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
+import { createPortal } from "react-dom";
 
 export type Card = {
   player_id: string;
@@ -57,7 +58,8 @@ function keyStats(c: Card): string[] {
   }
 }
 
-export default function PlayerCard({ card }: { card: Card }) {
+// The printed card itself. Used on the table and again, larger, in the zoom view.
+function CardFace({ card, zoomButton }: { card: Card; zoomButton?: React.ReactNode }) {
   const [imgFailed, setImgFailed] = useState(false);
   const initials = card.name
     .split(" ")
@@ -66,7 +68,7 @@ export default function PlayerCard({ card }: { card: Card }) {
     .slice(0, 2);
 
   return (
-    <div className={`pcard ${card.tier}`}>
+    <>
       <div className="pcard-top">
         <span className="pcard-pos">{card.position}</span>
         <span className="pcard-cost" title="Cap cost">
@@ -99,6 +101,72 @@ export default function PlayerCard({ card }: { card: Card }) {
       <div className="pcard-foot">
         {card.fantasy_points.toFixed(1)} fantasy pts · {card.tier}
       </div>
-    </div>
+      {zoomButton}
+    </>
+  );
+}
+
+// A card on the table. Clicking it opens the zoom view when zoomOnClick is on.
+// The zoom button always opens it, even where the card body is used for something else.
+export default function PlayerCard({ card, zoomOnClick = true }: { card: Card; zoomOnClick?: boolean }) {
+  const [zoomed, setZoomed] = useState(false);
+
+  useEffect(() => {
+    if (!zoomed) return;
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key === "Escape") setZoomed(false);
+    };
+    window.addEventListener("keydown", onKey);
+    return () => window.removeEventListener("keydown", onKey);
+  }, [zoomed]);
+
+  function open(e: React.MouseEvent) {
+    e.stopPropagation();
+    setZoomed(true);
+  }
+
+  return (
+    <>
+      <div
+        className={`pcard ${card.tier} ${zoomOnClick ? "zoomable" : ""}`}
+        onClick={zoomOnClick ? open : undefined}
+      >
+        <CardFace
+          card={card}
+          zoomButton={
+            <button type="button" className="pcard-zoom" onClick={open} aria-label={`Zoom in on ${card.name}`}>
+              <svg viewBox="0 0 24 24" aria-hidden="true">
+                <path d="M4 9V4h5M20 9V4h-5M4 15v5h5M20 15v5h-5" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round" />
+              </svg>
+            </button>
+          }
+        />
+      </div>
+
+      {zoomed &&
+        createPortal(
+          <div
+            className="zoom-backdrop"
+            role="dialog"
+            aria-modal="true"
+            aria-label={card.name}
+            onClick={(e) => {
+              e.stopPropagation();
+              setZoomed(false);
+            }}
+          >
+            <div className="zoom-stage" onClick={(e) => e.stopPropagation()}>
+              <div className={`zoom-aura ${card.tier}`} aria-hidden="true" />
+              <div className={`pcard big ${card.tier}`}>
+                <CardFace card={card} />
+              </div>
+              <button type="button" className="zoom-close" onClick={() => setZoomed(false)}>
+                Close
+              </button>
+            </div>
+          </div>,
+          document.body
+        )}
+    </>
   );
 }

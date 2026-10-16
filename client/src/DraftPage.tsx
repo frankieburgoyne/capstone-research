@@ -359,7 +359,7 @@ export default function DraftPage() {
               onClick={() => choose(c)}
             >
               <div className="pick-year">{c.season}</div>
-              <PlayerCard card={c} />
+              <PlayerCard card={c} zoomOnClick={false} />
             </div>
           );
         })}
