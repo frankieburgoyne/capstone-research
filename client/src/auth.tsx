@@ -8,11 +8,6 @@ export type User = {
   tokens: number;
   trophies: number;
   best_trophies: number;
-  bio: string;
-  favorite_team: string;
-  accent: string;
-  banner: string;
-  avatar: string | null;
 };
 
 type AuthState = {

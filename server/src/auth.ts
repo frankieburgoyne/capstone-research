@@ -15,11 +15,6 @@ import { pool } from "./db.js";
      tokens: number;
      trophies: number;
      best_trophies: number;
-     bio: string;
-     favorite_team: string;
-     accent: string;
-     banner: string;
-     avatar: string | null;
    };
 
 declare global {
@@ -28,10 +23,7 @@ declare global {
   }
 }
 
-   const PUBLIC_COLUMNS =
-     "id, email, display_name, tokens, trophies, best_trophies, bio, favorite_team, accent, banner, avatar";
-   const ACCENTS = ["blue", "cyan", "green", "gold", "elite"];
-   const BANNERS = ["floodlight", "field", "stripes", "night"];
+   const PUBLIC_COLUMNS = "id, email, display_name, tokens, trophies, best_trophies";
    
 // Called once at startup. Adds login sessions and Passport to the Express app.
 export function setupAuth(app: Express) {
@@ -157,45 +149,6 @@ authRouter.post("/logout", (req, res, next) => {
 });
 
 // GET /api/auth/me -> the logged-in user, or 401
-// PUT /api/auth/profile  { bio, favoriteTeam, accent, banner, avatar }
-// avatar: a data URL to set it, null to remove it, or leave it out to keep the current one.
-authRouter.put("/profile", async (req, res) => {
-  if (!req.user) return res.status(401).json({ error: "Log in first." });
-  const bio = String(req.body?.bio ?? "").trim();
-  const favoriteTeam = String(req.body?.favoriteTeam ?? "").trim();
-  if (bio.length > 160) return res.status(400).json({ error: "Bio can be up to 160 characters." });
-  if (favoriteTeam.length > 40) return res.status(400).json({ error: "Favourite team can be up to 40 characters." });
-  const accent = ACCENTS.includes(req.body?.accent) ? req.body.accent : "blue";
-  const banner = BANNERS.includes(req.body?.banner) ? req.body.banner : "floodlight";
-
-  let avatarSet = false;
-  let avatar: string | null = null;
-  if (req.body?.avatar !== undefined) {
-    avatarSet = true;
-    if (req.body.avatar !== null) {
-      avatar = String(req.body.avatar);
-      if (!/^data:image\/(jpeg|png|webp);base64,/.test(avatar)) {
-        return res.status(400).json({ error: "The picture must be a JPEG, PNG or WebP image." });
-      }
-      if (avatar.length > 90000) return res.status(400).json({ error: "That picture is too large." });
-    }
-  }
-
-  try {
-    const { rows } = await pool.query(
-      `UPDATE users
-          SET bio = $2, favorite_team = $3, accent = $4, banner = $5,
-              avatar = CASE WHEN $6::boolean THEN $7::text ELSE avatar END
-        WHERE id = $1
-        RETURNING ${PUBLIC_COLUMNS}`,
-      [req.user.id, bio, favoriteTeam, accent, banner, avatarSet, avatar]
-    );
-    res.json(rows[0]);
-  } catch {
-    res.status(500).json({ error: "Could not save your profile." });
-  }
-});
-
 authRouter.get("/me", (req, res) => {
   if (!req.user) return res.status(401).json({ error: "Not logged in." });
   res.json(req.user);
