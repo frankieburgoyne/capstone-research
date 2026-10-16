@@ -970,3 +970,83 @@ table.plays { width: 100%; border-collapse: collapse; min-width: 560px; backgrou
   .field { height: auto; display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; }
   .field .slot { position: static; transform: none; width: auto; }
 }
+
+/* ---------- round 3: night-game broadcast ---------- */
+
+/* Top bar: LED dot-matrix scoreboard behind the nav */
+.topbar {
+  background-image:
+    radial-gradient(rgba(63, 212, 242, 0.14) 1px, transparent 1.6px),
+    linear-gradient(180deg, rgba(7, 12, 23, 0.97), rgba(7, 12, 23, 0.86));
+  background-size: 6px 6px, auto;
+}
+.brand {
+  font-size: 2rem;
+  padding: 6px 14px 4px 12px;
+  background: linear-gradient(100deg, var(--blue) 0%, var(--blue-hi) 70%, var(--cyan) 100%);
+  transform: skewX(-10deg);
+  box-shadow: 0 0 22px rgba(47, 123, 255, 0.5);
+  margin-right: 14px;
+}
+.brand > * { transform: skewX(10deg); }
+.brand::after { display: none; }
+
+/* Hero: broadcast lower-third title with floodlight beams */
+.hero { overflow: hidden; }
+.hero::after {
+  content: "";
+  position: absolute;
+  top: -60px;
+  left: -8%;
+  width: 46%;
+  height: 340px;
+  background: linear-gradient(180deg, rgba(63, 212, 242, 0.35), transparent 75%);
+  transform: skewX(-22deg);
+  filter: blur(14px);
+  opacity: 0.7;
+  pointer-events: none;
+  z-index: -1;
+  animation: beam 6s ease-in-out infinite alternate;
+}
+.hero h1 {
+  display: inline-block;
+  position: relative;
+  padding: 0.05em 0.42em 0.1em 0.22em;
+  color: #fff;
+  z-index: 0;
+}
+.hero h1::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(90deg, var(--blue), var(--blue-hi) 80%, transparent);
+  transform: skewX(-12deg);
+  box-shadow: 0 0 40px rgba(47, 123, 255, 0.55);
+  z-index: -1;
+}
+.hero h1::after { width: 100%; max-width: 420px; }
+
+/* Player cards: holographic foil over the tier colour */
+.pcard { isolation: isolate; }
+.pcard::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  background: conic-gradient(from 200deg, #ff7ab6, #ffd166, #6ee7b7, #7ab0ff, #c084fc, #ff7ab6);
+  mix-blend-mode: color-dodge;
+  opacity: 0.14;
+  pointer-events: none;
+  z-index: -1;
+  transition: opacity 0.4s var(--ease);
+}
+.pcard:hover::before { opacity: 0.32; }
+.pcard > * { position: relative; }
+
+@keyframes beam {
+  from { transform: skewX(-22deg) translateX(0); }
+  to { transform: skewX(-22deg) translateX(40px); }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .hero::after { animation: none; }
+}
