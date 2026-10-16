@@ -5,6 +5,7 @@ import { CoinIcon, TrophyIcon } from "./Icons";
 import PlayerCard from "./PlayerCard";
 import type { Card } from "./PlayerCard";
 import { useCountUp } from "./useCountUp";
+import MatchField, { FIELD_POS } from "./MatchField";
 
 // The 9 lineup slots and which card type fits each one
 const SLOTS = [
@@ -18,20 +19,6 @@ const SLOTS = [
   { slot: "LB", group: "LB" },
   { slot: "DB", group: "DB" },
 ];
-
-// Where each slot sits on the field, as percentages (x across, y down).
-// Defense across the top, offense across the bottom, kicker on the sideline.
-const FIELD_POS: Record<string, [number, number]> = {
-  DL: [28, 20],
-  LB: [50, 20],
-  DB: [72, 20],
-  WR1: [14, 56],
-  TE: [74, 66],
-  WR2: [86, 56],
-  QB: [50, 62],
-  RB: [50, 84],
-  K: [88, 86],
-};
 
 type DraftCard = Card & { season: number; slot: string | null };
 
@@ -222,6 +209,8 @@ export default function DraftPage() {
     return (
       <div>
         <Scoreboard match={match} modeName={draft.mode_name} />
+
+        <MatchField slots={match.slots} yourLabel="You" cpuLabel={match.opponent_name} />
 
         <h3>Play by play</h3>
         <div className="tablewrap">
