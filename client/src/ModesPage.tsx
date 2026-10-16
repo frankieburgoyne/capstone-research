@@ -113,11 +113,13 @@ export default function ModesPage() {
 
   return (
     <div>
-      <h1>Pick a game</h1>
-      <p className="muted">
-        Pay the entry fee, draft a lineup from the pool, and play a computer opponent. A win pays back
-        double your entry. A loss keeps it. Modes unlock at your best trophy count (yours: {user.best_trophies}).
-      </p>
+      <header className="hero">
+        <h1>Pick a game</h1>
+        <p>
+          Pay the entry fee, draft a lineup from the pool, and play a computer opponent. A win pays back
+          double your entry. A loss keeps it. Modes unlock at your best trophy count (yours: {user.best_trophies}).
+        </p>
+      </header>
 
       {bonus && (
         <div className="bonus">
@@ -188,6 +190,7 @@ export default function ModesPage() {
                 </p>
               </div>
               <div className="ticket-stub">
+                <div className="admit">Admit one</div>
                 <div>
                   <div className="fee">{m.entry_fee}</div>
                   <div className="fee-label">tokens to enter</div>

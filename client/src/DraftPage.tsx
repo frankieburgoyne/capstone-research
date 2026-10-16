@@ -19,6 +19,20 @@ const SLOTS = [
   { slot: "DB", group: "DB" },
 ];
 
+// Where each slot sits on the field, as percentages (x across, y down).
+// Defense across the top, offense across the bottom, kicker on the sideline.
+const FIELD_POS: Record<string, [number, number]> = {
+  DL: [28, 20],
+  LB: [50, 20],
+  DB: [72, 20],
+  WR1: [14, 56],
+  TE: [74, 66],
+  WR2: [86, 56],
+  QB: [50, 62],
+  RB: [50, 84],
+  K: [88, 86],
+};
+
 type DraftCard = Card & { season: number; slot: string | null };
 
 type SlotCard = {
@@ -315,17 +329,25 @@ export default function DraftPage() {
         </div>
       </div>
 
-      <div className="slots">
-        {SLOTS.map((s) => {
-          const p = picks[s.slot];
-          const cls = ["slot", s.slot === activeSlot ? "active" : "", p ? "filled" : ""].join(" ");
-          return (
-            <button key={s.slot} className={cls} onClick={() => setActiveSlot(s.slot)}>
-              <div className="slot-name">{s.slot}</div>
-              <div className="slot-pick">{p ? `${p.name} (${p.tokens})` : "Empty"}</div>
-            </button>
-          );
-        })}
+      <div className="pitch">
+        <div className="field">
+          {SLOTS.map((s) => {
+            const p = picks[s.slot];
+            const cls = ["slot", s.slot === activeSlot ? "active" : "", p ? "filled" : ""].join(" ");
+            const [x, y] = FIELD_POS[s.slot];
+            return (
+              <button
+                key={s.slot}
+                className={cls}
+                style={{ left: `${x}%`, top: `${y}%` }}
+                onClick={() => setActiveSlot(s.slot)}
+              >
+                <div className="slot-name">{s.slot}</div>
+                <div className="slot-pick">{p ? `${p.name} (${p.tokens})` : "Empty"}</div>
+              </button>
+            );
+          })}
+        </div>
       </div>
 
       <div className="submit-row">

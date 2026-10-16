@@ -934,3 +934,39 @@ table.plays { width: 100%; border-collapse: collapse; min-width: 560px; backgrou
 @media (prefers-reduced-motion: reduce) {
   *, *::before, *::after { transition: none !important; animation: none !important; }
 }
+
+/* ---------- game gates: the admission ticket ---------- */
+.admit {
+  font: 900 0.95rem/1 var(--display);
+  text-transform: uppercase;
+  letter-spacing: 0.22em;
+  color: var(--muted);
+  border: 1px solid var(--line);
+  padding: 5px 10px;
+  border-radius: 4px;
+}
+.ticket:not(.locked) .admit { color: var(--cyan); border-color: rgba(63, 212, 242, 0.45); }
+.ticket:not(.locked)::after { border-color: rgba(63, 212, 242, 0.25); }
+.ticket:not(.locked) { border-color: rgba(63, 212, 242, 0.25); }
+.ticket:not(.locked)::before { top: -12px; }
+
+/* ---------- draft: the lineup laid out on a field ---------- */
+.field { position: relative; height: 560px; margin: 4px 0 6px; }
+.field .slot {
+  position: absolute;
+  transform: translate(-50%, -50%);
+  width: clamp(112px, 16vw, 142px);
+  text-align: center;
+  min-height: 0;
+  padding: 10px 12px;
+  backdrop-filter: blur(4px);
+  background: color-mix(in srgb, var(--panel) 85%, transparent);
+}
+.field .slot.filled { background: color-mix(in srgb, var(--panel-2) 90%, transparent); }
+.field .slot-name { font-size: 1.35rem; }
+.field .slot-pick { font-size: 0.8rem; }
+
+@media (max-width: 600px) {
+  .field { height: auto; display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; }
+  .field .slot { position: static; transform: none; width: auto; }
+}
