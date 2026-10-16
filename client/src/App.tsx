@@ -120,6 +120,7 @@ export default function App() {
                 <AnimatedNumber value={user.tokens} />
               </span>
               <NavLink to="/profile" className="hud-name">
+                {user.avatar && <img className="hud-avatar" src={user.avatar} alt="" />}
                 {user.display_name}
               </NavLink>
               <button className="btn-small" onClick={logout}>
