@@ -61,11 +61,13 @@ export default function CardsPage() {
 
   return (
     <div>
-      <h1>Player cards</h1>
-      <p className="muted">
-        Each card is one player in one season. The cap cost (1 to 100) shows how the player ranked
-        against everyone at the same position that season.
-      </p>
+      <header className="hero">
+        <h1>Player cards</h1>
+        <p>
+          Each card is one player in one season. The cap cost (1 to 100) shows how the player ranked
+          against everyone at the same position that season.
+        </p>
+      </header>
 
       <div className="filters">
         <select value={season} onChange={(e) => setSeason(e.target.value)}>
@@ -96,10 +98,12 @@ export default function CardsPage() {
 
       <p className="muted">{status}</p>
 
-      <div className="card-grid">
-        {shown.map((c) => (
-          <PlayerCard key={c.player_id} card={c} />
-        ))}
+      <div className="pitch">
+        <div className="card-grid">
+          {shown.map((c) => (
+            <PlayerCard key={c.player_id} card={c} />
+          ))}
+        </div>
       </div>
     </div>
   );

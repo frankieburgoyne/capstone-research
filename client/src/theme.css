@@ -291,6 +291,95 @@ select:disabled { opacity: 0.4; }
 .form-card form { display: flex; flex-direction: column; gap: 12px; }
 .filters { display: flex; flex-wrap: wrap; gap: 10px; margin: 20px 0; }
 
+/* ---------- stadium sections ---------- */
+/* Page header: a big display title over a fading yard-line field */
+.hero {
+  position: relative;
+  isolation: isolate;
+  padding: 14px 0 30px;
+  margin-bottom: 26px;
+  border-bottom: 1px solid var(--line);
+}
+.hero::before {
+  content: "";
+  position: absolute;
+  inset: -20px -18px 0;
+  background:
+    repeating-linear-gradient(90deg, transparent 0 58px, rgba(143, 155, 181, 0.07) 58px 60px),
+    radial-gradient(600px 220px at 20% 0%, rgba(47, 123, 255, 0.28), transparent 70%);
+  -webkit-mask-image: linear-gradient(180deg, #000 30%, transparent);
+  mask-image: linear-gradient(180deg, #000 30%, transparent);
+  pointer-events: none;
+  z-index: -1;
+}
+.hero h1 {
+  font-size: clamp(3.4rem, 9vw, 6.2rem);
+  text-shadow: 0 0 40px rgba(47, 123, 255, 0.45);
+  margin-bottom: 0.18em;
+}
+.hero h1::after {
+  content: "";
+  display: block;
+  width: 140px;
+  height: 6px;
+  margin-top: 16px;
+  border-radius: 3px;
+  background: linear-gradient(90deg, var(--cyan), var(--blue));
+  box-shadow: 0 0 16px rgba(63, 212, 242, 0.6);
+}
+.hero p { font-size: 1.08rem; color: #b4bfd6; max-width: 62ch; margin-top: 18px; }
+
+/* The filter strip is a dark scoreboard bar */
+.filters {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+  padding: 12px;
+  margin: 0 0 22px;
+  background: var(--bg-deep);
+  border: 1px solid var(--line);
+  border-radius: 14px;
+  box-shadow: inset 0 0 30px rgba(0, 0, 0, 0.6);
+}
+.filters select { min-width: 170px; font-weight: 600; }
+
+/* The card area is a field with a centre circle */
+.pitch {
+  position: relative;
+  overflow: hidden;
+  padding: 36px 18px 40px;
+  border-radius: 22px;
+  border: 1px solid var(--line);
+  background:
+    repeating-linear-gradient(0deg, rgba(47, 123, 255, 0.05) 0 70px, transparent 70px 140px),
+    radial-gradient(ellipse at 50% 0%, rgba(63, 212, 242, 0.12), transparent 70%),
+    linear-gradient(180deg, #0c1628, var(--bg-deep));
+  box-shadow: inset 0 0 80px rgba(0, 0, 0, 0.55);
+}
+.pitch::before {
+  content: "";
+  position: absolute;
+  left: 50%;
+  top: 50%;
+  width: 300px;
+  height: 300px;
+  transform: translate(-50%, -50%);
+  border: 2px solid rgba(143, 155, 181, 0.12);
+  border-radius: 50%;
+  pointer-events: none;
+}
+.pitch::after {
+  content: "";
+  position: absolute;
+  left: 0;
+  right: 0;
+  top: 50%;
+  height: 2px;
+  background: rgba(143, 155, 181, 0.12);
+  pointer-events: none;
+}
+.pitch .card-grid { position: relative; justify-content: center; }
+
 /* ---------- player card: foil ---------- */
 .card-grid { display: flex; flex-wrap: wrap; gap: 20px; }
 
