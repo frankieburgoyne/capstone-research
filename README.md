@@ -1,49 +1,49 @@
-# Player Cards
+# Draft Day (fantasy football token card game)
 
-A small web app where every card is one NFL player in one season (QB, RB, WR, TE, 1999 to 2026).
-Pick a season, then a team, and see the players as cards with a photo, key stats, and a token value.
+A test bed for our capstone: a TypeScript web game where players draft lineups of football "player-season" cards, play matchups, bet tokens, and challenge friends. It is not the real project repo. Everything runs on free tiers.
 
-Live site: https://capstone-research-k4cn.onrender.com
+Link to site: https://capstone-research-k4cn.onrender.com
 
 ## Stack
 
-- **TypeScript** everywhere
-- **React + Vite:** the web page
-- **Node.js + Express:** the server and API
-- **PostgreSQL on Neon:** the database
-- **Render:** hosts the server and the built page
-- **npm:** installs libraries
+| Part | Tech |
+| --- | --- |
+| Client | React 19 + Vite + React Router 7 |
+| Server | Node 22 + Express 5, run with tsx |
+| Database | Postgres on Neon (free) |
+| Hosting | Render free tier, auto-deploys from `main` |
+| Language | TypeScript |
 
-## How it works
+## Features
 
-1. A one-time import copies season stats from the nfldata.org API into the database.
-2. The server reads cards from the database and calculates tokens.
-3. The page shows season and team dropdowns and the cards.
+- **Cards:** every card is one player-season, with a cost and tier (bronze, silver, gold, elite) set by percentile rank within its season and position group.
+- **Accounts:** register, log in, session cookies, bcrypt-hashed passwords.
+- **Game modes:** unlocked by trophies. Each has an entry fee, a lineup cap, allowed tiers, and a season range.
+- **Drafting:** pick 9 cards (QB, RB, 2 WR, TE, K, DL, LB, DB) from a random pool under the cap.
+- **Matchups vs computer:** on game day each card scores its season fantasy points times a random 0.8 to 1.2. A win pays 2x the entry fee and gives trophies. A loss forfeits the fee and loses trophies. A draw returns the fee.
+- **Daily bonus:** +25 tokens every 24 hours.
+- **Betting:** head-to-head, over/under, and parlays on generated matchups. 8% house edge.
+- **Friends:** search by display name, send and accept requests, a friends list ranked by trophies, and your win-loss record against each friend.
+- **Messages:** chat with friends (the client polls every 3 seconds). Unread badge in the nav.
+- **Friend challenges:** you and a friend draft from the same pool, then your lineups play. Optional token wager: the winner takes both, a draw refunds both. No trophy changes. Declining or cancelling refunds. A challenger can cancel an accepted challenge after 24 hours.
+- **Look and feel:** dark navy theme with slate panels, bright blue actions, cyan stats, green positives. Hover and press effects, animated token/trophy counters, and toasts. Motion is turned off for users who prefer reduced motion.
 
-Token value = season PPR fantasy points divided by 4 (minimum 1). Tiers: bronze under 30,
-silver 30 to 54, gold 55 to 79, elite 80+. The formula is in `server/src/tokens.ts`.
+## Project layout
 
-## Run it locally
-
-You need Node.js (version 20.6 or newer) and a free Neon database.
-
-1. Copy `server/.env.example` to `server/.env` and put your Neon connection string in it.
-2. In `server`: `npm install`, then `npm run import-cards` (takes a few minutes), then `npm run dev`.
-3. In `client`: `npm install`, then `npm run dev`.
-4. Open http://localhost:5173
-
-## Deploy
-
-Render builds the page and runs the server from this repo's `main` branch.
-Build command: `cd client && npm install && npm run build && cd ../server && npm install --include=dev`
-Start command: `cd server && npm start`
-Environment variables: `DATABASE_URL` and `NODE_VERSION=22`.
-
-## Notes
-
-- Free hosting sleeps when idle, so the first visit can take about a minute.
-- A player traded mid-season appears under one team, and playoff players may include playoff games.
-- Stats come from nfldata.org, which is built on the open nflverse data. Credit to nflverse.
-- Player photos are served from NFL.com and are not stored in this repo.
-- The original ESPN-based milestone is preserved under the git tag `milestone-submitted`.
-
+```
+client/            React app
+  src/
+    App.tsx        nav, routes, social notification polling
+    theme.css      all styles and color tokens
+    *Page.tsx      one file per screen
+server/
+  migrations/      node-pg-migrate SQL files (001 ... 010)
+  src/
+    index.ts       Express setup and routes
+    drafts.ts      drafting and submit
+    matchup.ts     scoring rules
+    bets.ts        betting, odds.ts has the odds math
+    social.ts      friends and messages
+    challenges.ts  friend challenges
+    challenge-resolve.ts  plays a challenge and pays out
+```
